@@ -1,0 +1,36 @@
+{
+     "configs":[
+          {
+               "id":1000,
+               "source_params":["DeviceID=AAA"],
+               "target_server":"http://10.214.0.102"
+          },
+          {
+               "id":2000,
+               "source_server":"http://www.funguide.com.cn",
+               "source_path":["/ticket/req.do","/newticket/req.do"],
+               "source_params":["processcode=11002","processcode=11003","DeviceID=12345609888"],
+               "target_server": "http://10.214.0.102",
+               "target_path": "/times/list",
+               "target_param_name_swap":{ "processcode":"ProcessCode","DeviceID":"DeviceId","city_id":"cityId" }
+          },
+          {
+               "id":100,
+               "source_server":"http://www.funguide.com.cn",
+               "source_path":["/ticket/req.do","/newticket/req.do"],
+               "source_params":["processcode=11009","processcode=11003","DeviceID=12345609888"],
+               "target_server": "http://10.214.0.102",
+               "target_path": "/times/list",
+               "target_param_name_swap":{ "processcode":"ProcessCode","DeviceID":"DeviceId","city_id":"cityId" },
+               "connection_timeout":5,
+               "response_timeout": 30
+          }
+     ],
+     "listen":{
+       "host": "0.0.0.0",
+       "port": 9000
+     },
+      "default":{
+        "target_server": "http://10.150.150.184"
+      }
+}

@@ -1,0 +1,43 @@
+#CGO_ENABLED=0
+#GOOS=windows|linux
+#GOARCH=386|amd64
+
+
+
+
+TOP_PKG=go-transit
+
+CC=llvm-gcc
+
+GOPATH=$(shell pwd)
+GOCMD=GOPATH=$(GOPATH) go
+GOBUILD=$(GOCMD) build
+GOCLEAN=$(GOCMD) clean
+GOINSTALL=$(GOCMD) install
+GOTEST=$(GOCMD) test
+GODEP=$(GOTEST) -i
+GOFMT=gofmt -w
+#GOPATH=$(shell pwd):$(shell pwd)/lib
+
+
+
+all: install
+	@echo ${GOPATH}
+	@echo ${TOP_PKG}
+	
+build:
+	$(GOBUILD) -o $(GOPATH)/bin/$(TOP_PKG) $(TOP_PKG)
+
+clean:
+	$(GOCLEAN) $(TOP_PKG)
+	rm -rf bin
+	rm -rf pkg
+	
+install:
+	$(GOINSTALL) $(TOP_PKG)
+	
+test:
+	$(GOTEST) $(TOP_PKG)
+	
+fmt:
+	$(GOFMT) src

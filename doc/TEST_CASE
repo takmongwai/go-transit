@@ -1,0 +1,24 @@
+curl -i -F name=ttt -F filedate=@rename.rb "http://localhost:9000/ticket/req.do?a=a&b=d"
+curl -d "processcode=A11002&city=10&aaa=100" "http://127.0.0.1:9000/Tticket/req.do?aa=bb&cc=dd&processcode=V11002&aa=中文"
+
+测试用例
+
+GET 测试
+curl -vv "http://localhost:9000/path/file.img?pn1=001&pn2=002"
+curl -vvv  "http://localhost:9000/?getname=getvalue,9900&afefe=afe&set=01:10|11:12|99:123123"
+
+
+POST 测试
+curl -vv -d "pd=001&pd=002" "http://localhost:9000/path/file.img?pn1=001&pn2=002"
+
+POST multipart/form-data 测试
+curl -F "ff=01&ff=02" -vv "http://localhost:9000/path/file.img?pn1=001&pn2=002"
+
+
+需要得到上述请求中的参数值, post 不要直接解析 body
+
+
+curl -vvv --referer "http://www.google.com/path/file/a?params=100" http://localhost:9000/
+
+curl -vvv --referer "http://www.google.com/path/file/a?params=100" "http://localhost:9000/?a=a&processcode=11002&ccc=1:2|4:5||8:9"
+curl -vvv --referer "http://www.google.com/path/file/a?params=100" -d "postn=1&postn1=2" "http://localhost:9000/?a=a&processcode=11002&ccc=1:2|4:5||8:9"
