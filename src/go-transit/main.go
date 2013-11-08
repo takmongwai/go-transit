@@ -72,51 +72,67 @@ func init() {
   }
 }
 
+func init_dir(dir string) {
+  if !file_exists(dir) {
+    os.MkdirAll(dir, 0755)
+  }
+}
+
 func init_access_log() {
   log_path := g_config.AccessLogFile
+  if len(log_path) != 0 && filepath.IsAbs(log_path) {
+    g_runtime_env.AccessLog = file_logger(log_path)
+    return
+  }
 
   if len(log_path) == 0 {
     if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, "log", "access.log")); err == nil {
-      log_path = fap
+      g_runtime_env.AccessLog = file_logger(fap)
     }
+    return
   }
 
-  log_dir := filepath.Dir(log_path)
-  if !file_exists(log_dir) {
-    os.MkdirAll(log_dir, 0755)
-  }
-
-  if out, err := os.OpenFile(log_path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend|0666); err == nil {
-    g_runtime_env.AccessLog = log.New(out, "", 0)
-    now := time.Now()
-    g_runtime_env.AccessLog.Printf("#start at: %s\n", strftime.Strftime(&now, "%Y-%m-%d %H:%M:%S"))
-  } else {
-    log.Fatal(err)
+  if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, g_config.AccessLogFile)); err == nil {
+    g_runtime_env.AccessLog = file_logger(fap)
+    return
   }
 
 }
 
 func init_error_log() {
   log_path := g_config.ErrorLogFile
+  if len(log_path) != 0 && filepath.IsAbs(log_path) {
+    g_runtime_env.ErrorLog = file_logger(log_path)
+    return
+  }
 
   if len(log_path) == 0 {
-    if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, "log", "error.log")); err == nil {
-      log_path = fap
+    if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, "log", "access.log")); err == nil {
+      g_runtime_env.ErrorLog = file_logger(fap)
     }
+    return
   }
 
-  log_dir := filepath.Dir(log_path)
-  if !file_exists(log_dir) {
-    os.MkdirAll(log_dir, 0755)
+  if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, log_path)); err == nil {
+    g_runtime_env.ErrorLog = file_logger(fap)
+    return
   }
 
+}
+
+func file_logger(log_path string)(logger *log.Logger) {
+  if !filepath.IsAbs(log_path) {
+    return
+  }
+  init_dir(filepath.Dir(log_path))
   if out, err := os.OpenFile(log_path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend|0666); err == nil {
-    g_runtime_env.ErrorLog = log.New(out, "", 0)
+    logger = log.New(out, "", 0)
     now := time.Now()
-    g_runtime_env.ErrorLog.Printf("#start at: %s\n", strftime.Strftime(&now, "%Y-%m-%d %H:%M:%S"))
+    logger.Printf("#start at: %s\n", strftime.Strftime(&now, "%Y-%m-%d %H:%M:%S"))
   } else {
     log.Fatal(err)
   }
+  return
 }
 
 func main() {
@@ -157,5 +173,6 @@ func main() {
 
   init_access_log()
   init_error_log()
+
   Run()
 }

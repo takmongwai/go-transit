@@ -8,7 +8,7 @@ import (
   "net"
   "net/http"
   "net/url"
-  "os"
+  // "os"
   "strings"
   "time"
 )
@@ -182,7 +182,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func Run() {
-  fmt.Printf("%s => %s \n", "command: ", os.Args[0])
   fmt.Printf("start@ %s:%d %v \n", g_config.Listen.Host, g_config.Listen.Port, time.Now())
   http.HandleFunc("/", handler)
   if err := http.ListenAndServe(fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port), nil); err != nil {
