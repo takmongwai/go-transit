@@ -1,10 +1,7 @@
-## 2013-11-01
-1. 实现 target_param_name_swap 后端请求的参数名转换
+1. 实现 target_param_name_swap 后端请求的参数名转换 [V]
+1. 查找逻辑需要修改,返回配置的匹配级别为:  source_path && source_params > source_params > source_path [V]
+1. 路径，参数配置支持正则表达式 []
 
-
-## 2013-11-08
-1. 查找逻辑需要修改,返回配置的匹配级别为:
-  source_path && source_params > source_params > source_path
   
   
   
