@@ -31,5 +31,6 @@
       "default":{
         "target_server": "http://10.150.150.247"
       },
-      "log_file":"log/access_%y%m%d.log"
+      "access_log_file":"log/access.log",
+      "error_log_file":"log/error.log"
 }

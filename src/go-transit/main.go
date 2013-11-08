@@ -4,11 +4,23 @@ import (
   "config"
   "flag"
   "fmt"
-  "httpd"
+  "github.com/weidewang/go-strftime"
   "log"
   "os"
   "path/filepath"
+  "strings"
+  "time"
 )
+
+type RuntimeEnv struct {
+  FullPath  string
+  Home      string
+  AccessLog *log.Logger
+  ErrorLog  *log.Logger
+}
+
+var g_config config.ConfigFileT
+var g_runtime_env RuntimeEnv
 
 func file_exists(name string) bool {
   if _, err := os.Stat(name); err != nil {
@@ -21,26 +33,15 @@ func file_exists(name string) bool {
 
 func show_usage() {
   fmt.Fprintf(os.Stderr,
-    "Usage: %s [-f=<cofnig>]\n"+
-      "       [<args>]\n\n",
+    "Usage: %s \n",
     os.Args[0])
   flag.PrintDefaults()
-  fmt.Fprintf(os.Stderr,
-    "\nCommands:\n"+
-      "  -f=config.json"+
-      "\n\n")
 }
 
-
-func find_config_file(currentDir string) (cf string, err error) {
-  current_dir_config_func := func(file_path string) string {
-    cf, _ := filepath.Abs(fmt.Sprintf("%s%c%s", currentDir, filepath.Separator, file_path))
-    return cf
-  }
+func find_config_file() (cf string, err error) {
 
   try_files := []string{
-    current_dir_config_func("config.json"),
-    current_dir_config_func("../etc/config.json"),
+    filepath.Join(g_runtime_env.Home, "etc", "config.json"),
   }
 
   for _, cf = range try_files {
@@ -54,40 +55,107 @@ func find_config_file(currentDir string) (cf string, err error) {
   return
 }
 
-func logger_file_path(){
-}
-
-
-
-func main() {
-  dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-  if err != nil {
+func init() {
+  var (
+    fullpath string
+    err      error
+  )
+  if fullpath, err = filepath.Abs(os.Args[0]); err != nil {
     log.Fatal(err)
   }
-  
+  g_runtime_env.FullPath = fullpath
+  if strings.HasSuffix(filepath.Dir(fullpath), "bin") {
+    fp, _ := filepath.Abs(filepath.Join(filepath.Dir(fullpath), ".."))
+    g_runtime_env.Home = fp
+  } else {
+    g_runtime_env.Home = filepath.Dir(fullpath)
+  }
+}
+
+func init_access_log() {
+  log_path := g_config.AccessLogFile
+
+  if len(log_path) == 0 {
+    if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, "log", "access.log")); err == nil {
+      log_path = fap
+    }
+  }
+
+  log_dir := filepath.Dir(log_path)
+  if !file_exists(log_dir) {
+    os.MkdirAll(log_dir, 0755)
+  }
+
+  if out, err := os.OpenFile(log_path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend|0666); err == nil {
+    g_runtime_env.AccessLog = log.New(out, "", 0)
+    now := time.Now()
+    g_runtime_env.AccessLog.Printf("#start at: %s\n", strftime.Strftime(&now, "%Y-%m-%d %H:%M:%S"))
+  } else {
+    log.Fatal(err)
+  }
+
+}
+
+func init_error_log() {
+  log_path := g_config.ErrorLogFile
+
+  if len(log_path) == 0 {
+    if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, "log", "error.log")); err == nil {
+      log_path = fap
+    }
+  }
+
+  log_dir := filepath.Dir(log_path)
+  if !file_exists(log_dir) {
+    os.MkdirAll(log_dir, 0755)
+  }
+
+  if out, err := os.OpenFile(log_path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend|0666); err == nil {
+    g_runtime_env.ErrorLog = log.New(out, "", 0)
+    now := time.Now()
+    g_runtime_env.ErrorLog.Printf("#start at: %s\n", strftime.Strftime(&now, "%Y-%m-%d %H:%M:%S"))
+  } else {
+    log.Fatal(err)
+  }
+}
+
+func main() {
   var (
+    err         error
     config_file string
+    host        string
+    port        int
   )
-  
-  //flag.Usage = show_usage
+
+  flag.Usage = show_usage
   flag.StringVar(&config_file, "f", "", "config file path")
+  flag.IntVar(&port, "p", 9000, "listen port")
+  flag.StringVar(&host, "h", "127.0.0.1", "listen ip")
   flag.Parse()
-  
 
   if len(config_file) == 0 {
-    config_file, err = find_config_file(dir)
+    config_file, err = find_config_file()
     if err != nil {
       log.Fatal(err)
     }
   }
-  fmt.Println("=================")
-  fmt.Println(config_file)
-
 
   if !file_exists(config_file) {
     log.Fatal("ERROR: Can't find any config file.")
     os.Exit(1)
   }
   log.Printf(`INFO: Using config file "%s"`, config_file)
-  httpd.Run(config.LoadConfigFile(config_file))
+  g_config = config.LoadConfigFile(config_file)
+
+  if g_config.Listen.Port != port {
+    g_config.Listen.Port = port
+  }
+
+  if len(host) != 0 {
+    g_config.Listen.Host = host
+  }
+
+  init_access_log()
+  init_error_log()
+  Run()
 }

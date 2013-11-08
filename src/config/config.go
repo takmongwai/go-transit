@@ -29,7 +29,6 @@ type ConfigT struct {
   TargetParamNameSwap map[string]string `json:"target_param_name_swap"`
   ConnectionTimeout   int               `json:"connection_timeout"`
   ResponseTimeout     int               `json:"response_timeout"`
-  LogFile             string            `json:"log_file"`
 }
 
 //总体配置文件结构
@@ -40,6 +39,8 @@ type ConfigFileT struct {
     Host string
     Port int
   }
+  AccessLogFile string `json:"access_log_file"`
+  ErrorLogFile  string `json:"error_log_file"`
 }
 
 //返回配置文件条目数
@@ -141,11 +142,4 @@ func LoadConfig(b []byte) (cs ConfigFileT) {
   }
   sort.Sort(sortById(cs.Configs))
   return
-}
-
-/*
-日期格式转换,将 %Y %m %d 等转换成 golang 的样式
-*/
-func time_format(){
-  
 }

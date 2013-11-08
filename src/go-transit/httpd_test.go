@@ -1,4 +1,4 @@
-package httpd
+package main
 
 import (
 	"fmt"

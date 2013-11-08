@@ -17,6 +17,7 @@ GOINSTALL=$(GOCMD) install
 GOTEST=$(GOCMD) test
 GODEP=$(GOTEST) -i
 GOFMT=gofmt -w
+GOGET=$(GOCMD) get
 #GOPATH=$(shell pwd):$(shell pwd)/lib
 
 
@@ -41,3 +42,6 @@ test:
 	
 fmt:
 	$(GOFMT) src
+
+get:
+	$(GOGET) 

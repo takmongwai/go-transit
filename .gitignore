@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-bin
-pkg
-tmp
-=======
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
 *.a
@@ -11,6 +6,9 @@ tmp
 # Folders
 _obj
 _test
+bin
+log
+tmp
 
 # Architecture specific extensions/prefixes
 *.[568vq]
@@ -25,4 +23,3 @@ _cgo_export.*
 _testmain.go
 
 *.exe
->>>>>>> 6c789223c51b459e5d541ef34769dd82b56fcd51
