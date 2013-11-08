@@ -174,8 +174,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
   defer r.Body.Close()
   //获取配置文件
   t0 := time.Now()
-
-  cfg := g_config.FindByBoth(parseQuerys(r), r.URL.Path)
+  var cfg *config.ConfigT
+  var cfg_err *config.ConfigErr
+  if cfg, cfg_err = g_config.FindBySourcePathAndParams(parseQuerys(r), r.URL.Path); cfg_err != nil {
+    cfg = g_config.FindByParamsOrSourcePath(parseQuerys(r), r.URL.Path)
+  }
   query_url, _ := url.Parse(targetServer(cfg) + targetPath(r, cfg) + "?" + rawQueryAndSwap(r, cfg))
   backendServer(w, httpRequest{Url: query_url.String(), Header: r.Header, Method: r.Method, Body: r.Body, Config: cfg})
   accessLog(w, r, query_url.String(), t0)

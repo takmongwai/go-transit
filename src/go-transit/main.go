@@ -78,6 +78,7 @@ func init_dir(dir string) {
   }
 }
 
+
 func init_access_log() {
   log_path := g_config.AccessLogFile
   if len(log_path) != 0 && filepath.IsAbs(log_path) {

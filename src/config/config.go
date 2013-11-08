@@ -111,8 +111,21 @@ func (c *ConfigFileT) FindBySourcePath(reqPath string) (config *ConfigT, err *Co
   return
 }
 
+
+//根据路径和参数进行查找,两个都匹配才返回对应配置
+func (c *ConfigFileT) FindBySourcePathAndParams(reqParams []string, reqPath string) (config *ConfigT, err *ConfigErr) {
+  for _,cf := range c.Configs {
+    if cf.SourcePaths.Pos(reqPath)!=-1 && cf.SourceParams.IsInclude(reqParams) {
+      config = &cf
+      return 
+    }
+  }
+  err = &ConfigErr{When: time.Now(), What: "no match by source path and source params."}
+  return
+}
+
 //根据路径和参数查找,参数优先级比路径高,都找不到则返回默认值
-func (c *ConfigFileT) FindByBoth(reqParams []string, reqPath string) (config *ConfigT) {
+func (c *ConfigFileT) FindByParamsOrSourcePath(reqParams []string, reqPath string) (config *ConfigT) {
   var err *ConfigErr
   if config, err = c.FindBySourceParams(reqParams); err != nil {
     if config, err = c.FindBySourcePath(reqPath); err != nil {
@@ -141,5 +154,8 @@ func LoadConfig(b []byte) (cs ConfigFileT) {
     panic("Parse json failed.")
   }
   sort.Sort(sortById(cs.Configs))
+  if len(cs.Default.TargetServer) == 0 {
+    panic("default target server must be configured.")
+  }
   return
 }
