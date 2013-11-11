@@ -156,11 +156,19 @@ func (c *ConfigFile) FindBySourcePath(reqPath string) (config *Config, err *Conf
 //根据路径和参数进行查找,两个都匹配才返回对应配置
 func (c *ConfigFile) FindBySourcePathAndParams(reqParams []string, reqPath string) (config *Config, err *ConfigErr) {
   for _, cf := range c.Configs {
+    /*
     pc, pe := cf.FindBySourcePath(reqPath)
     sc, se := cf.FindBySourceParams(reqParams)
     if pe == nil && se == nil && pc.Id == sc.Id {
       config = &cf
       return
+    }
+    */
+    if pc,pe := cf.FindBySourcePath(reqPath);pe == nil {
+      if sc,se := cf.FindBySourceParams(reqParams);se == nil && pc.Id == sc.Id {
+        config = &cf
+        return
+      }
     }
   }
   err = &ConfigErr{When: time.Now(), What: "no match by source path and source params."}
