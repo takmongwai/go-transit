@@ -22,3 +22,7 @@ curl -vvv --referer "http://www.google.com/path/file/a?params=100" http://localh
 
 curl -vvv --referer "http://www.google.com/path/file/a?params=100" "http://localhost:9000/?a=a&processcode=11002&ccc=1:2|4:5||8:9"
 curl -vvv --referer "http://www.google.com/path/file/a?params=100" -d "postn=1&postn1=2" "http://localhost:9000/?a=a&processcode=11002&ccc=1:2|4:5||8:9"
+
+
+curl  -vvv --referer "http://www.google.com/?DeviceID=fe19bbb14ce0b12512cf726661507dc4" "http://127.0.0.1:9000/ticket/req.do?processcode=11002&city=10"
+curl "http://127.0.0.1:9000/ticket/req.do?processcode=11002&city=10&DeviceID=fe19bbb14ce0b12512cf726661507dc4"

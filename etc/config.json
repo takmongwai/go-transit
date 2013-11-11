@@ -1,5 +1,15 @@
 {
+     "comment":"可用本字段做注释用",
      "configs":[
+          {
+            "id":900,
+            "source_params":["^PA=A.*"],
+            "target_server": "http://www.163.com"
+            },{
+              "id":901,
+              "source_path":["^/AA/(\\d)+","^/C/(\\w)+"],
+              "target_server":"http://www.funguide.com.cn"
+            },
           {
                "id":1000,
                "source_params":["DeviceID=AAA"],

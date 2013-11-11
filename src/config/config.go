@@ -4,7 +4,9 @@ import (
   "encoding/json"
   "fmt"
   "io/ioutil"
+  "regexp"
   "sort"
+  "strings"
   "time"
 )
 
@@ -20,7 +22,7 @@ func (e ConfigErr) Error() string {
 type StringSlice []string
 
 //配置项
-type ConfigT struct {
+type Config struct {
   Id                  int               `json:"id"`
   SourcePaths         StringSlice       `json:"source_path"`
   SourceParams        StringSlice       `json:"source_params"`
@@ -32,9 +34,9 @@ type ConfigT struct {
 }
 
 //总体配置文件结构
-type ConfigFileT struct {
-  Default ConfigT
-  Configs []ConfigT
+type ConfigFile struct {
+  Default Config
+  Configs []Config
   Listen  struct {
     Host string
     Port int
@@ -44,12 +46,12 @@ type ConfigFileT struct {
 }
 
 //返回配置文件条目数
-func (c *ConfigFileT) Len() int {
+func (c *ConfigFile) Len() int {
   return len(c.Configs)
 }
 
 //=======================需要对 ConfigFile[].ID 进行排序
-type sortById []ConfigT
+type sortById []Config
 
 func (v sortById) Len() int           { return len(v) }
 func (v sortById) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
@@ -84,11 +86,35 @@ func (ss StringSlice) IsInclude(s StringSlice) bool {
 /**
 根据参数查询
 reqParams 传入的参数数组,类似 p=1 p1=pp 等参数对
+支持正则表达式
 */
-func (c *ConfigFileT) FindBySourceParams(reqParams []string) (config *ConfigT, err *ConfigErr) {
+
+func (cf *Config) FindBySourceParams(reqParams []string) (config *Config, err *ConfigErr) {
+  for _, sp := range cf.SourceParams {
+    if strings.HasPrefix(sp, "^") {
+      vr := regexp.MustCompile(sp)
+      for _, qp := range reqParams {
+        if vr.MatchString(qp) {
+          config = cf
+          return
+        }
+      }
+    } else {
+      for _, qp := range reqParams {
+        if qp == sp {
+          config = cf
+          return
+        }
+      }
+    }
+  }
+  err = &ConfigErr{When: time.Now(), What: "no match by source params."}
+  return
+}
+
+func (c *ConfigFile) FindBySourceParams(reqParams []string) (config *Config, err *ConfigErr) {
   for _, cf := range c.Configs {
-    if cf.SourceParams.IsInclude(reqParams) {
-      config = &cf
+    if config, err = cf.FindBySourceParams(reqParams); err == nil {
       return
     }
   }
@@ -99,11 +125,15 @@ func (c *ConfigFileT) FindBySourceParams(reqParams []string) (config *ConfigT, e
 /**
 根据请求路径查找
 reqPath 当前请求的路径
+配置文件中支持正则
 */
-func (c *ConfigFileT) FindBySourcePath(reqPath string) (config *ConfigT, err *ConfigErr) {
-  for _, cf := range c.Configs {
-    if cf.SourcePaths.Pos(reqPath) != -1 {
-      config = &cf
+func (cf *Config) FindBySourcePath(reqPath string) (config *Config, err *ConfigErr) {
+  for _, sp := range cf.SourcePaths {
+    if strings.HasPrefix(sp, "^") && regexp.MustCompile(sp).MatchString(reqPath) {
+      config = cf
+      return
+    } else if sp == reqPath {
+      config = cf
       return
     }
   }
@@ -111,13 +141,26 @@ func (c *ConfigFileT) FindBySourcePath(reqPath string) (config *ConfigT, err *Co
   return
 }
 
+func (c *ConfigFile) FindBySourcePath(reqPath string) (config *Config, err *ConfigErr) {
+
+  for _, cf := range c.Configs {
+    if config, err = cf.FindBySourcePath(reqPath); err == nil {
+      return
+    }
+  }
+
+  err = &ConfigErr{When: time.Now(), What: "no match by source path."}
+  return
+}
 
 //根据路径和参数进行查找,两个都匹配才返回对应配置
-func (c *ConfigFileT) FindBySourcePathAndParams(reqParams []string, reqPath string) (config *ConfigT, err *ConfigErr) {
-  for _,cf := range c.Configs {
-    if cf.SourcePaths.Pos(reqPath)!=-1 && cf.SourceParams.IsInclude(reqParams) {
+func (c *ConfigFile) FindBySourcePathAndParams(reqParams []string, reqPath string) (config *Config, err *ConfigErr) {
+  for _, cf := range c.Configs {
+    pc, pe := cf.FindBySourcePath(reqPath)
+    sc, se := cf.FindBySourceParams(reqParams)
+    if pe == nil && se == nil && pc.Id == sc.Id {
       config = &cf
-      return 
+      return
     }
   }
   err = &ConfigErr{When: time.Now(), What: "no match by source path and source params."}
@@ -125,7 +168,7 @@ func (c *ConfigFileT) FindBySourcePathAndParams(reqParams []string, reqPath stri
 }
 
 //根据路径和参数查找,参数优先级比路径高,都找不到则返回默认值
-func (c *ConfigFileT) FindByParamsOrSourcePath(reqParams []string, reqPath string) (config *ConfigT) {
+func (c *ConfigFile) FindByParamsOrSourcePath(reqParams []string, reqPath string) (config *Config) {
   var err *ConfigErr
   if config, err = c.FindBySourceParams(reqParams); err != nil {
     if config, err = c.FindBySourcePath(reqPath); err != nil {
@@ -138,7 +181,7 @@ func (c *ConfigFileT) FindByParamsOrSourcePath(reqParams []string, reqPath strin
 /**
 读取配置文件
 */
-func LoadConfigFile(fileName string) ConfigFileT {
+func LoadConfigFile(fileName string) ConfigFile {
   b, err := ioutil.ReadFile(fileName)
   if err != nil {
     panic("Load Config File Error.")
@@ -149,7 +192,7 @@ func LoadConfigFile(fileName string) ConfigFileT {
 /**
 解析配置文件
 */
-func LoadConfig(b []byte) (cs ConfigFileT) {
+func LoadConfig(b []byte) (cs ConfigFile) {
   if json.Unmarshal([]byte(b), &cs) != nil {
     panic("Parse json failed.")
   }

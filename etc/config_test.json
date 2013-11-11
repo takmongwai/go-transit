@@ -1,5 +1,11 @@
 {
      "configs":[
+         {
+              "id":5000,
+              "source_path":["^/BB.*","^/CC.*"],
+              "source_params":["DeviceID=AAA"],
+              "target_server":"http://10.214.0.102"
+         },
           {
                "id":1000,
                "source_params":["DeviceID=AAA"],
@@ -9,6 +15,14 @@
                "id":2000,
                "source_path":["/ticket/req.do","/newticket/req.do"],
                "source_params":["processcode=11002","processcode=11003","DeviceID=12345609888"],
+               "target_server": "http://10.214.0.102",
+               "target_path": "/times/list",
+               "target_param_name_swap":{ "processcode":"ProcessCode","DeviceID":"DeviceId","city_id":"cityId" }
+          },
+          {
+               "id":2001,
+               "source_path":["/ticket/req.do","/newticket/req.do"],
+               "source_params":["^processcode=r.*$"],
                "target_server": "http://10.214.0.102",
                "target_path": "/times/list",
                "target_param_name_swap":{ "processcode":"ProcessCode","DeviceID":"DeviceId","city_id":"cityId" }

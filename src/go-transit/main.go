@@ -19,29 +19,33 @@ type RuntimeEnv struct {
   ErrorLog  *log.Logger
 }
 
-var g_config config.ConfigFileT
-var g_runtime_env RuntimeEnv
+var g_config config.ConfigFile
+var g_env RuntimeEnv
 
 func file_exists(name string) bool {
+  
   if _, err := os.Stat(name); err != nil {
     if os.IsNotExist(err) {
       return false
     }
   }
   return true
+  
 }
 
 func show_usage() {
+  
   fmt.Fprintf(os.Stderr,
     "Usage: %s \n",
     os.Args[0])
   flag.PrintDefaults()
+  
 }
 
 func find_config_file() (cf string, err error) {
-
+  
   try_files := []string{
-    filepath.Join(g_runtime_env.Home, "etc", "config.json"),
+    filepath.Join(g_env.Home, "etc", "config.json"),
   }
 
   for _, cf = range try_files {
@@ -56,45 +60,54 @@ func find_config_file() (cf string, err error) {
 }
 
 func init() {
+  
   var (
     fullpath string
     err      error
   )
+  
   if fullpath, err = filepath.Abs(os.Args[0]); err != nil {
     log.Fatal(err)
   }
-  g_runtime_env.FullPath = fullpath
+  
+  g_env.FullPath = fullpath
+  
   if strings.HasSuffix(filepath.Dir(fullpath), "bin") {
     fp, _ := filepath.Abs(filepath.Join(filepath.Dir(fullpath), ".."))
-    g_runtime_env.Home = fp
+    g_env.Home = fp
   } else {
-    g_runtime_env.Home = filepath.Dir(fullpath)
+    g_env.Home = filepath.Dir(fullpath)
   }
+  
 }
 
 func init_dir(dir string) {
+  
   if !file_exists(dir) {
     os.MkdirAll(dir, 0755)
   }
+  
 }
 
 
 func init_access_log() {
+  
   log_path := g_config.AccessLogFile
+  
   if len(log_path) != 0 && filepath.IsAbs(log_path) {
-    g_runtime_env.AccessLog = file_logger(log_path)
+    g_env.AccessLog = file_logger(log_path)
     return
   }
 
   if len(log_path) == 0 {
-    if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, "log", "access.log")); err == nil {
-      g_runtime_env.AccessLog = file_logger(fap)
+    if fap, err := filepath.Abs(filepath.Join(g_env.Home, "log", "access.log")); err == nil {
+      g_env.AccessLog = file_logger(fap)
     }
     return
   }
 
-  if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, g_config.AccessLogFile)); err == nil {
-    g_runtime_env.AccessLog = file_logger(fap)
+  if fap, err := filepath.Abs(filepath.Join(g_env.Home, g_config.AccessLogFile)); err == nil {
+    g_env.AccessLog = file_logger(fap)
     return
   }
 
@@ -103,29 +116,32 @@ func init_access_log() {
 func init_error_log() {
   log_path := g_config.ErrorLogFile
   if len(log_path) != 0 && filepath.IsAbs(log_path) {
-    g_runtime_env.ErrorLog = file_logger(log_path)
+    g_env.ErrorLog = file_logger(log_path)
     return
   }
 
   if len(log_path) == 0 {
-    if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, "log", "access.log")); err == nil {
-      g_runtime_env.ErrorLog = file_logger(fap)
+    if fap, err := filepath.Abs(filepath.Join(g_env.Home, "log", "access.log")); err == nil {
+      g_env.ErrorLog = file_logger(fap)
     }
     return
   }
 
-  if fap, err := filepath.Abs(filepath.Join(g_runtime_env.Home, log_path)); err == nil {
-    g_runtime_env.ErrorLog = file_logger(fap)
+  if fap, err := filepath.Abs(filepath.Join(g_env.Home, log_path)); err == nil {
+    g_env.ErrorLog = file_logger(fap)
     return
   }
 
 }
 
 func file_logger(log_path string)(logger *log.Logger) {
+  
   if !filepath.IsAbs(log_path) {
     return
   }
+  
   init_dir(filepath.Dir(log_path))
+  
   if out, err := os.OpenFile(log_path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend|0666); err == nil {
     logger = log.New(out, "", 0)
     now := time.Now()
@@ -161,6 +177,7 @@ func main() {
     log.Fatal("ERROR: Can't find any config file.")
     os.Exit(1)
   }
+  
   log.Printf(`INFO: Using config file "%s"`, config_file)
   g_config = config.LoadConfigFile(config_file)
 

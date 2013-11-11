@@ -8,7 +8,6 @@ import (
   "net"
   "net/http"
   "net/url"
-  // "os"
   "strings"
   "time"
 )
@@ -18,7 +17,7 @@ type httpRequest struct {
   Header http.Header
   Body   io.ReadCloser
   Method string
-  Config *config.ConfigT
+  Config *config.Config
 }
 
 /**
@@ -28,6 +27,11 @@ func headerCopy(s http.Header, d *http.Header) {
   for hk, _ := range s {
     d.Set(hk, s.Get(hk))
   }
+}
+
+func showError(w http.ResponseWriter, msg []byte) {
+  w.WriteHeader(500)
+  w.Write(msg)
 }
 
 func backendServer(w http.ResponseWriter, r httpRequest) {
@@ -56,31 +60,35 @@ func backendServer(w http.ResponseWriter, r httpRequest) {
     Transport: &transport,
   }
 
-  showError := func(w http.ResponseWriter, msg []byte) {
-    w.WriteHeader(500)
-    w.Write(msg)
+  req, err := http.NewRequest(r.Method, r.Url, r.Body)
+
+  headerCopy(r.Header, &req.Header)
+
+  defer func() { req.Close = true }()
+
+  if err != nil {
+    log.Println(err)
+    showError(w, []byte(err.Error()))
+    return
   }
 
-  req, err := http.NewRequest(r.Method, r.Url, r.Body)
-  headerCopy(r.Header, &req.Header)
-  defer func() { req.Close = true }()
-  if err != nil {
-    log.Println(err)
-    showError(w, []byte(err.Error()))
-    return
-  }
   resp, err := client.Do(req)
+
   defer resp.Body.Close()
+
   if err != nil {
     log.Println(err)
     showError(w, []byte(err.Error()))
     return
   }
+
   for hk, _ := range resp.Header {
     w.Header().Set(hk, resp.Header.Get(hk))
   }
+  
   w.WriteHeader(resp.StatusCode)
   io.Copy(w, resp.Body)
+
 }
 
 func accessLog(w http.ResponseWriter, r *http.Request, query_url string, startTime time.Time) {
@@ -107,7 +115,7 @@ func accessLog(w http.ResponseWriter, r *http.Request, query_url string, startTi
     fmt.Sprintf("%s F:{%s}", query_url, strings.Join(postValues, "&")),
     time.Now().Sub(startTime).Seconds(),
   )
-  g_runtime_env.AccessLog.Println(logLine)
+  g_env.AccessLog.Println(logLine)
 }
 
 func parseQuerys(r *http.Request) (rawQuery []string) {
@@ -117,8 +125,8 @@ func parseQuerys(r *http.Request) (rawQuery []string) {
   }
   if len(r.Referer()) > 0 {
     if uri, err := url.Parse(r.Referer()); err == nil {
-      for k, v := range uri.Query() {
-        rawQuery = append(rawQuery, fmt.Sprintf("%s=%s", k, v))
+      for k, _ := range uri.Query() {
+        rawQuery = append(rawQuery, fmt.Sprintf("%s=%s", k, uri.Query().Get(k)))
       }
     }
   }
@@ -128,7 +136,7 @@ func parseQuerys(r *http.Request) (rawQuery []string) {
 /**
 获取目标地址
 */
-func targetPath(r *http.Request, cfg *config.ConfigT) (t string) {
+func targetPath(r *http.Request, cfg *config.Config) (t string) {
   if len(cfg.TargetPath) > 0 {
     t = cfg.TargetPath
   } else {
@@ -140,7 +148,7 @@ func targetPath(r *http.Request, cfg *config.ConfigT) (t string) {
 /**
 获取目标服务服务器
 */
-func targetServer(cfg *config.ConfigT) (s string) {
+func targetServer(cfg *config.Config) (s string) {
   if len(cfg.TargetServer) > 0 {
     s = cfg.TargetServer
   } else {
@@ -152,7 +160,7 @@ func targetServer(cfg *config.ConfigT) (s string) {
 /**
 获取查询参数并做替换
 */
-func rawQueryAndSwap(r *http.Request, cfg *config.ConfigT) (q string) {
+func rawQueryAndSwap(r *http.Request, cfg *config.Config) (q string) {
   if len(cfg.TargetParamNameSwap) == 0 {
     q = r.URL.RawQuery
     return
@@ -174,7 +182,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   defer r.Body.Close()
   //获取配置文件
   t0 := time.Now()
-  var cfg *config.ConfigT
+  var cfg *config.Config
   var cfg_err *config.ConfigErr
   if cfg, cfg_err = g_config.FindBySourcePathAndParams(parseQuerys(r), r.URL.Path); cfg_err != nil {
     cfg = g_config.FindByParamsOrSourcePath(parseQuerys(r), r.URL.Path)
