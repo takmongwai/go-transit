@@ -30,8 +30,8 @@
                "target_server": "http://10.214.0.102",
                "target_path": "/times/list",
                "target_param_name_swap":{ "processcode":"ProcessCode","DeviceID":"DeviceId","city_id":"cityId" },
-               "connection_timeout":5,
-               "response_timeout": 30
+               "connection_timeout":30,
+               "response_timeout": 120
           }
      ],
      "listen":{
@@ -42,5 +42,6 @@
         "target_server": "http://10.150.150.247"
       },
       "access_log_file":"log/access.log",
-      "error_log_file":"log/error.log"
+      "error_log_file":"log/error.log",
+      "admin_uri":"/go-transit"
 }

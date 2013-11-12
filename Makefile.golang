@@ -10,7 +10,7 @@ TOP_PKG=go-transit
 CC=llvm-gcc
 #GOPATH=$(shell pwd)
 PWD=$(shell pwd)
-GOCMD=GOPATH=$(PWD) go
+GOCMD=GOPATH=$(GOPATH):$(PWD) go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOINSTALL=$(GOCMD) install

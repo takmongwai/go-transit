@@ -4,6 +4,11 @@ import (
   "testing"
 )
 
+/**
+go test -test.bench=".*" 
+正则表达式匹配要比精确匹配慢10倍
+*/
+
 //配置文件样例
 const CONFIG_FILE = "../../etc/config_test.json"
 
@@ -44,7 +49,7 @@ func BenchmarkFindBySourcePath(b *testing.B) {
 }
 
 
-func TestFindBySourcePath2(t *testing.T) {
+func TestFindBySourcePath_Regex(t *testing.T) {
   if config, err := configFile.FindBySourcePath("/BB");err != nil{
     t.Errorf("根据源请求路径进行查找错误.A")
   }else if config.Id != 5000 {
@@ -52,7 +57,7 @@ func TestFindBySourcePath2(t *testing.T) {
   }
 }
 
-func BenchmarkFindBySourcePath2(b *testing.B) {
+func BenchmarkFindBySourcePath_Regex(b *testing.B) {
   for i := 0; i < b.N; i++ {
     if config, err := configFile.FindBySourcePath("/BB"); err !=nil {
       b.Errorf("根据源请求路径进行查找错误.A")
@@ -81,8 +86,8 @@ func BenchmarkFindBySourceParams(b *testing.B) {
   }
 }
 
-func TestFindBySourceParams2(t *testing.T) {
-  if config, err := configFile.FindBySourceParams([]string{"processcode=r1002","processcode=r2002"}); err != nil {
+func TestFindBySourceParams_Regex(t *testing.T) {
+  if config, err := configFile.FindBySourceParams([]string{"processcode=r1002"}); err != nil {
     t.Errorf("根据源参数进行查找错误.A")
   } else if config.Id != 2001 {
     t.Errorf("根据源参数进行查找错误.B")
@@ -90,9 +95,9 @@ func TestFindBySourceParams2(t *testing.T) {
 
 }
 
-func BenchmarkFindBySourceParams2(b *testing.B) {
+func BenchmarkFindBySourceParams_Regex(b *testing.B) {
   for i := 0; i < b.N; i++ {
-    if config, err := configFile.FindBySourceParams([]string{"processcode=r1002","processcode=r2002"}); err != nil {
+    if config, err := configFile.FindBySourceParams([]string{"processcode=r1002"}); err != nil {
       b.Errorf("根据源参数进行查找错误.A")
     } else if config != nil && config.Id != 2001 {
       b.Errorf("根据源参数进行查找错误.B")

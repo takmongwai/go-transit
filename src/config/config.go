@@ -43,6 +43,7 @@ type ConfigFile struct {
   }
   AccessLogFile string `json:"access_log_file"`
   ErrorLogFile  string `json:"error_log_file"`
+  AdminUri      string `json:"admin_uri"`
 }
 
 //返回配置文件条目数
@@ -90,17 +91,22 @@ reqParams 传入的参数数组,类似 p=1 p1=pp 等参数对
 */
 
 func (cf *Config) FindBySourceParams(reqParams []string) (config *Config, err *ConfigErr) {
-  for _, sp := range cf.SourceParams {
+  var (
+    vr *regexp.Regexp
+    qp string
+    sp string
+  )
+  for _, sp = range cf.SourceParams {
     if strings.HasPrefix(sp, "^") {
-      vr := regexp.MustCompile(sp)
-      for _, qp := range reqParams {
+      vr = regexp.MustCompile(sp)
+      for _, qp = range reqParams {
         if vr.MatchString(qp) {
           config = cf
           return
         }
       }
     } else {
-      for _, qp := range reqParams {
+      for _, qp = range reqParams {
         if qp == sp {
           config = cf
           return
@@ -113,8 +119,8 @@ func (cf *Config) FindBySourceParams(reqParams []string) (config *Config, err *C
 }
 
 func (c *ConfigFile) FindBySourceParams(reqParams []string) (config *Config, err *ConfigErr) {
-  for _, cf := range c.Configs {
-    if config, err = cf.FindBySourceParams(reqParams); err == nil {
+  for idx := 0; idx < len(c.Configs); idx++ {
+    if config, err = c.Configs[idx].FindBySourceParams(reqParams); err == nil {
       return
     }
   }
@@ -142,9 +148,9 @@ func (cf *Config) FindBySourcePath(reqPath string) (config *Config, err *ConfigE
 }
 
 func (c *ConfigFile) FindBySourcePath(reqPath string) (config *Config, err *ConfigErr) {
-
-  for _, cf := range c.Configs {
-    if config, err = cf.FindBySourcePath(reqPath); err == nil {
+  //for 结构体,下标 要比 range 快好多,range 需要每个都重复赋值,而普通数据类型则无差别
+  for idx := 0; idx < len(c.Configs); idx++ {
+    if config, err = c.Configs[idx].FindBySourcePath(reqPath); err == nil {
       return
     }
   }
@@ -155,22 +161,19 @@ func (c *ConfigFile) FindBySourcePath(reqPath string) (config *Config, err *Conf
 
 //根据路径和参数进行查找,两个都匹配才返回对应配置
 func (c *ConfigFile) FindBySourcePathAndParams(reqParams []string, reqPath string) (config *Config, err *ConfigErr) {
-  for _, cf := range c.Configs {
-    /*
-    pc, pe := cf.FindBySourcePath(reqPath)
-    sc, se := cf.FindBySourceParams(reqParams)
-    if pe == nil && se == nil && pc.Id == sc.Id {
-      config = &cf
-      return
-    }
-    */
-    if pc,pe := cf.FindBySourcePath(reqPath);pe == nil {
-      if sc,se := cf.FindBySourceParams(reqParams);se == nil && pc.Id == sc.Id {
-        config = &cf
+  var (
+    pc, sc *Config
+    pe, se *ConfigErr
+  )
+  for idx := 0; idx < len(c.Configs); idx++ {
+    if pc, pe = c.Configs[idx].FindBySourcePath(reqPath); pe == nil {
+      if sc, se = c.Configs[idx].FindBySourceParams(reqParams); se == nil && pc.Id == sc.Id {
+        config = &c.Configs[idx]
         return
       }
     }
   }
+
   err = &ConfigErr{When: time.Now(), What: "no match by source path and source params."}
   return
 }

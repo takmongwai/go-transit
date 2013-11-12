@@ -162,8 +162,8 @@ func main() {
 
   flag.Usage = show_usage
   flag.StringVar(&config_file, "f", "", "config file path")
-  flag.IntVar(&port, "p", 9000, "listen port")
-  flag.StringVar(&host, "h", "127.0.0.1", "listen ip")
+  flag.IntVar(&port, "p", 9000, "listen port,default 9000")
+  flag.StringVar(&host, "h", "", "listen ip,default 127.0.0.1")
   flag.Parse()
 
   if len(config_file) == 0 {

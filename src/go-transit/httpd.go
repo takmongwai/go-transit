@@ -40,10 +40,10 @@ func backendServer(w http.ResponseWriter, r httpRequest) {
     response_timeout   int
   )
   if conntction_timeout = r.Config.ConnectionTimeout; conntction_timeout <= 0 {
-    conntction_timeout = 5
+    conntction_timeout = 30
   }
   if response_timeout = r.Config.ResponseTimeout; response_timeout <= 0 {
-    response_timeout = 30
+    response_timeout = 120
   }
 
   transport := http.Transport{
@@ -67,7 +67,7 @@ func backendServer(w http.ResponseWriter, r httpRequest) {
   defer func() { req.Close = true }()
 
   if err != nil {
-    log.Println(err)
+    g_env.ErrorLog.Println(err)
     showError(w, []byte(err.Error()))
     return
   }
@@ -77,7 +77,7 @@ func backendServer(w http.ResponseWriter, r httpRequest) {
   defer resp.Body.Close()
 
   if err != nil {
-    log.Println(err)
+    g_env.ErrorLog.Println(err)
     showError(w, []byte(err.Error()))
     return
   }
@@ -85,7 +85,7 @@ func backendServer(w http.ResponseWriter, r httpRequest) {
   for hk, _ := range resp.Header {
     w.Header().Set(hk, resp.Header.Get(hk))
   }
-  
+
   w.WriteHeader(resp.StatusCode)
   io.Copy(w, resp.Body)
 
@@ -181,7 +181,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
   defer r.Body.Close()
   //获取配置文件
-  t0 := time.Now()
+  start_at := time.Now()
   var cfg *config.Config
   var cfg_err *config.ConfigErr
   if cfg, cfg_err = g_config.FindBySourcePathAndParams(parseQuerys(r), r.URL.Path); cfg_err != nil {
@@ -189,7 +189,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
   query_url, _ := url.Parse(targetServer(cfg) + targetPath(r, cfg) + "?" + rawQueryAndSwap(r, cfg))
   backendServer(w, httpRequest{Url: query_url.String(), Header: r.Header, Method: r.Method, Body: r.Body, Config: cfg})
-  accessLog(w, r, query_url.String(), t0)
+  accessLog(w, r, query_url.String(), start_at)
 }
 
 func Run() {

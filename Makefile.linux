@@ -11,7 +11,7 @@ CC=llvm-gcc
 
 #GOPATH=$(shell pwd)
 PWD=$(shell pwd)
-GOCMD=CGO_ENABLED=0 GOOS=linux GOARCH=amd64  GOPATH=$(PWD) go
+GOCMD=CGO_ENABLED=0 GOOS=linux GOARCH=amd64  GOPATH=$(GOPATH):$(PWD) go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOINSTALL=$(GOCMD) install
