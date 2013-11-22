@@ -181,7 +181,7 @@ func main() {
   log.Printf(`INFO: Using config file "%s"`, config_file)
   g_config = config.LoadConfigFile(config_file)
 
-  if g_config.Listen.Port != port {
+  if g_config.Listen.Port <= 0 && port > 0  {
     g_config.Listen.Port = port
   }
 
