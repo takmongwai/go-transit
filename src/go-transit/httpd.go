@@ -35,6 +35,12 @@ func showError(w http.ResponseWriter, msg []byte) {
 }
 
 func backendServer(w http.ResponseWriter, r httpRequest) {
+  defer func() {
+    if re := recover(); re != nil {
+      g_env.ErrorLog.Println("Recovered in backendServer:", re)
+    }
+  }()
+  
   var (
     conntction_timeout int
     response_timeout   int

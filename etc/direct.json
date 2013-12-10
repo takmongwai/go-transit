@@ -1,0 +1,17 @@
+{
+     "comment":"可用本字段做注释用",
+     "configs":[
+     ],
+     "listen":{
+       "host": "0.0.0.0",
+       "port": 9000
+     },
+      "default":{
+        "target_server": "http://10.150.150.18"
+      },
+      "access_log_file":"log/access.log",
+      "error_log_file":"log/error.log",
+      "admin":{
+        "uri":"/go-transit/admin"
+      }
+}
