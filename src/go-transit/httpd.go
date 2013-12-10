@@ -121,6 +121,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     }
   }()
   //raw_body, _ := ioutil.ReadAll(r.Body)
+  defer r.Body.Close()
 
   //获取配置文件
   start_at := time.Now()
