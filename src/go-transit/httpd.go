@@ -1,9 +1,11 @@
 package main
 
 import (
+  "bytes"
   "config"
   "fmt"
   "io"
+  "io/ioutil"
   "log"
   "net"
   "net/http"
@@ -11,14 +13,6 @@ import (
   "strings"
   "time"
 )
-
-type httpRequest struct {
-  Url    string
-  Header http.Header
-  Body   io.ReadCloser
-  Method string
-  Config *config.Config
-}
 
 /**
 http Header Copay
@@ -32,72 +26,6 @@ func headerCopy(s http.Header, d *http.Header) {
 func showError(w http.ResponseWriter, msg []byte) {
   w.WriteHeader(500)
   w.Write(msg)
-}
-
-func backendServer(w http.ResponseWriter, r httpRequest) {
-  defer func() {
-    if re := recover(); re != nil {
-      g_env.ErrorLog.Println("Recovered in backendServer:", re)
-    }
-  }()
-  
-  var (
-    conntction_timeout int
-    response_timeout   int
-  )
-  if conntction_timeout = r.Config.ConnectionTimeout; conntction_timeout <= 0 {
-    conntction_timeout = 30
-  }
-  if response_timeout = r.Config.ResponseTimeout; response_timeout <= 0 {
-    response_timeout = 120
-  }
-
-  transport := http.Transport{
-    Dial: func(nework, addr string) (net.Conn, error) {
-      return net.DialTimeout(nework, addr, time.Duration(conntction_timeout)*time.Second)
-    },
-    ResponseHeaderTimeout: time.Duration(response_timeout) * time.Second,
-    DisableCompression:    false,
-    DisableKeepAlives:     true,
-    MaxIdleConnsPerHost:   200,
-  }
-
-  client := &http.Client{
-    Transport: &transport,
-  }
-
-  req, err := http.NewRequest(r.Method, r.Url, r.Body)
-
-  headerCopy(r.Header, &req.Header)
-
-  defer func() { req.Close = true }()
-
-  if err != nil {
-    g_env.ErrorLog.Println(err)
-    showError(w, []byte(err.Error()))
-    return
-  }
-
-  resp, err := client.Do(req)
-  if err !=nil {
-    g_env.ErrorLog.Println(req,err)
-  }
-
-  defer resp.Body.Close()
-
-  if err != nil {
-    g_env.ErrorLog.Println(err)
-    showError(w, []byte(err.Error()))
-    return
-  }
-
-  for hk, _ := range resp.Header {
-    w.Header().Set(hk, resp.Header.Get(hk))
-  }
-
-  w.WriteHeader(resp.StatusCode)
-  io.Copy(w, resp.Body)
-
 }
 
 func accessLog(w http.ResponseWriter, r *http.Request, query_url string, startTime time.Time) {
@@ -187,17 +115,90 @@ func rawQueryAndSwap(r *http.Request, cfg *config.Config) (q string) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+  defer func() {
+    if re := recover(); re != nil {
+      g_env.ErrorLog.Println("Recovered in backendServer:", re)
+    }
+  }()
+  raw_body, _ := ioutil.ReadAll(r.Body)
 
-  defer r.Body.Close()
   //获取配置文件
   start_at := time.Now()
   var cfg *config.Config
   var cfg_err *config.ConfigErr
+
   if cfg, cfg_err = g_config.FindBySourcePathAndParams(parseQuerys(r), r.URL.Path); cfg_err != nil {
     cfg = g_config.FindByParamsOrSourcePath(parseQuerys(r), r.URL.Path)
   }
+
   query_url, _ := url.Parse(targetServer(cfg) + targetPath(r, cfg) + "?" + rawQueryAndSwap(r, cfg))
-  backendServer(w, httpRequest{Url: query_url.String(), Header: r.Header, Method: r.Method, Body: r.Body, Config: cfg})
+
+  var (
+    conntction_timeout int
+    response_timeout   int
+  )
+  if conntction_timeout = cfg.ConnectionTimeout; conntction_timeout <= 0 {
+    conntction_timeout = 30
+  }
+  if response_timeout = cfg.ResponseTimeout; response_timeout <= 0 {
+    response_timeout = 120
+  }
+
+  transport := http.Transport{
+    Dial: func(nework, addr string) (net.Conn, error) {
+      return net.DialTimeout(nework, addr, time.Duration(conntction_timeout)*time.Second)
+    },
+    ResponseHeaderTimeout: time.Duration(response_timeout) * time.Second,
+    DisableCompression:    false,
+    DisableKeepAlives:     true,
+    MaxIdleConnsPerHost:   200,
+  }
+
+  client := &http.Client{
+    Transport: &transport,
+  }
+
+  //req, err := http.NewRequest(r.Method,query_url.String(), r.Body)
+  var req *http.Request
+  var err error
+
+  switch r.Method {
+  case "GET", "HEAD":
+    req, err = http.NewRequest(r.Method, query_url.String(), nil)
+  case "POST":
+    req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewReader(raw_body))
+    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+  }
+
+  headerCopy(r.Header, &req.Header)
+  //req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+  defer func() { req.Close = true }()
+
+  if err != nil {
+    g_env.ErrorLog.Println(err)
+    showError(w, []byte(err.Error()))
+    return
+  }
+
+  resp, err := client.Do(req)
+  if err != nil {
+    g_env.ErrorLog.Println(req, err)
+  }
+
+  defer resp.Body.Close()
+
+  if err != nil {
+    g_env.ErrorLog.Println(err)
+    showError(w, []byte(err.Error()))
+    return
+  }
+
+  for hk, _ := range resp.Header {
+    w.Header().Set(hk, resp.Header.Get(hk))
+  }
+
+  w.WriteHeader(resp.StatusCode)
+  io.Copy(w, resp.Body)
   accessLog(w, r, query_url.String(), start_at)
 }
 
