@@ -151,8 +151,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
     },
     ResponseHeaderTimeout: time.Duration(response_timeout) * time.Second,
     DisableCompression:    false,
-    DisableKeepAlives:     true,
-    MaxIdleConnsPerHost:   200,
+    DisableKeepAlives:     false,
+    MaxIdleConnsPerHost:   20,
   }
 
   client := &http.Client{
