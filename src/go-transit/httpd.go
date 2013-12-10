@@ -5,7 +5,7 @@ import (
   "config"
   "fmt"
   "io"
-  "io/ioutil"
+  _ "io/ioutil"
   "log"
   "net"
   "net/http"
@@ -120,7 +120,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
       g_env.ErrorLog.Println("Recovered in backendServer:", re)
     }
   }()
-  raw_body, _ := ioutil.ReadAll(r.Body)
+  //raw_body, _ := ioutil.ReadAll(r.Body)
 
   //获取配置文件
   start_at := time.Now()
@@ -166,7 +166,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
   case "GET", "HEAD":
     req, err = http.NewRequest(r.Method, query_url.String(), nil)
   case "POST":
-    req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewReader(raw_body))
+    // req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewReader(raw_body))
+    req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewReader(bytes.NewBufferString(strings.Join(parseQuerys(r), "&")).Bytes()))
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
   }
 
