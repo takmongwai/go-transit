@@ -79,6 +79,9 @@ func backendServer(w http.ResponseWriter, r httpRequest) {
   }
 
   resp, err := client.Do(req)
+  if err !=nil {
+    g_env.ErrorLog.Println(req,err)
+  }
 
   defer resp.Body.Close()
 
