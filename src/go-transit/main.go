@@ -23,27 +23,27 @@ var g_config config.ConfigFile
 var g_env RuntimeEnv
 
 func file_exists(name string) bool {
-  
+
   if _, err := os.Stat(name); err != nil {
     if os.IsNotExist(err) {
       return false
     }
   }
   return true
-  
+
 }
 
 func show_usage() {
-  
+
   fmt.Fprintf(os.Stderr,
     "Usage: %s \n",
     os.Args[0])
   flag.PrintDefaults()
-  
+
 }
 
 func find_config_file() (cf string, err error) {
-  
+
   try_files := []string{
     filepath.Join(g_env.Home, "etc", "config.json"),
   }
@@ -60,40 +60,31 @@ func find_config_file() (cf string, err error) {
 }
 
 func init() {
-  
   var (
     fullpath string
     err      error
   )
-  
   if fullpath, err = filepath.Abs(os.Args[0]); err != nil {
     log.Fatal(err)
   }
-  
   g_env.FullPath = fullpath
-  
   if strings.HasSuffix(filepath.Dir(fullpath), "bin") {
     fp, _ := filepath.Abs(filepath.Join(filepath.Dir(fullpath), ".."))
     g_env.Home = fp
   } else {
     g_env.Home = filepath.Dir(fullpath)
   }
-  
 }
 
 func init_dir(dir string) {
-  
   if !file_exists(dir) {
     os.MkdirAll(dir, 0755)
   }
-  
 }
 
-
 func init_access_log() {
-  
   log_path := g_config.AccessLogFile
-  
+
   if len(log_path) != 0 && filepath.IsAbs(log_path) {
     g_env.AccessLog = file_logger(log_path)
     return
@@ -134,14 +125,11 @@ func init_error_log() {
 
 }
 
-func file_logger(log_path string)(logger *log.Logger) {
-  
+func file_logger(log_path string) (logger *log.Logger) {
   if !filepath.IsAbs(log_path) {
     return
   }
-  
   init_dir(filepath.Dir(log_path))
-  
   if out, err := os.OpenFile(log_path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend|0666); err == nil {
     logger = log.New(out, "", 0)
     now := time.Now()
@@ -177,20 +165,17 @@ func main() {
     log.Fatal("ERROR: Can't find any config file.")
     os.Exit(1)
   }
-  
+
   log.Printf(`INFO: Using config file "%s"`, config_file)
   g_config = config.LoadConfigFile(config_file)
 
-  if g_config.Listen.Port <= 0 && port > 0  {
+  if g_config.Listen.Port <= 0 {
     g_config.Listen.Port = port
   }
-
   if len(host) != 0 {
     g_config.Listen.Host = host
   }
-
   init_access_log()
   init_error_log()
-
   Run()
 }

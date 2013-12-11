@@ -10,8 +10,5 @@
         "target_server": "http://cmb.funguide.com.cn:8080"
       },
       "access_log_file":"log/access.log",
-      "error_log_file":"log/error.log",
-      "admin":{
-        "uri":"/go-transit/admin"
-      }
+      "error_log_file":"log/error.log"
 }

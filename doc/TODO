@@ -8,3 +8,7 @@
     x.x.x.x/xx  xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx-xxx.xxx.xxx.xxx 等
 
 1. 可分别对前端和后端做 gzip 支持
+
+
+
+对后端的请求以及对参数 rul的判断需要重写。 post 的时候有问题，r.Boby 在 parseQuerys 之后就变空了。
