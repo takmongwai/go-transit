@@ -128,7 +128,7 @@ func timeout_dialer(conn_timeout int, rw_timeout int) func(net, addr string) (c 
   }
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func handler_func(w http.ResponseWriter, r *http.Request) {
   var (
     cfg                                  *config.Config
     cfg_err                              *config.ConfigErr
@@ -151,7 +151,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
   if err != nil {
     g_env.ErrorLog.Println(req, err)
-    show_error(w, http.StatusInternalServerError, []byte("Read Body Error."))
+    http.Error(w, "Read Body Error.", http.StatusInternalServerError)
     return
   }
 
@@ -190,7 +190,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewBufferString(strings.Join(raw_query, "&")))
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
   default:
-    show_error(w, http.StatusMethodNotAllowed, []byte("MethodNotAllowed"))
+    http.Error(w, "MethodNotAllowed", http.StatusMethodNotAllowed)
     return
   }
   req.Close = true
@@ -199,7 +199,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
   if err != nil {
     g_env.ErrorLog.Println(err)
-    show_error(w, http.StatusInternalServerError, []byte(err.Error()))
+    http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
 
@@ -208,7 +208,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
   if err != nil {
     g_env.ErrorLog.Println(req, err)
-    show_error(w, http.StatusInternalServerError, []byte(err.Error()))
+    http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
 
@@ -216,7 +216,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set(hk, resp.Header.Get(hk))
   }
   w.Header().Set("X-Transit-Ver", "0.0.1")
-  
+
   if len(w.Header().Get("Server")) == 0 {
     w.Header().Set("Server", "X-Transit")
   }
@@ -229,8 +229,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func Run() {
   g_env.ErrorLog.Printf("start@ %s:%d %v \n", g_config.Listen.Host, g_config.Listen.Port, time.Now())
   fmt.Printf("start@ %s:%d %v \n", g_config.Listen.Host, g_config.Listen.Port, time.Now())
-  http.HandleFunc("/", handler)
-  if err := http.ListenAndServe(fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port), nil); err != nil {
-    log.Fatal(err)
+  s := &http.Server{
+    Addr:           fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port),
+    Handler:        http.HandlerFunc(handler_func),
+    ReadTimeout:    10 * time.Second,
+    WriteTimeout:   10 * time.Second,
+    MaxHeaderBytes: 1 << 20,
   }
+  //http.HandleFunc("/", handler)
+  //if err := http.ListenAndServe(fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port), nil); err != nil {
+  //log.Fatal(err)
+  //}
+  log.Fatal(s.ListenAndServe())
 }
