@@ -23,12 +23,6 @@ func header_copy(s http.Header, d *http.Header) {
   }
 }
 
-func show_error(w http.ResponseWriter, status int, msg []byte) {
-  w.WriteHeader(status)
-  w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-  w.Write(msg)
-}
-
 func access_log(w http.ResponseWriter, r *http.Request, query_url string, startTime time.Time) {
 
   remoteAddr := strings.Split(r.RemoteAddr, ":")[0] //客户端地址

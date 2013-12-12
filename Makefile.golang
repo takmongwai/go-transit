@@ -31,7 +31,6 @@ build:
 
 clean:
 	$(GOCLEAN) $(TOP_PKG)
-	rm -rf bin
 	rm -rf pkg
 	
 install:
