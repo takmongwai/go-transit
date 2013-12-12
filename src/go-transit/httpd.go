@@ -172,8 +172,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
     Dial: timeout_dialer(conntction_timeout, response_timeout),
     ResponseHeaderTimeout: time.Duration(response_timeout) * time.Second,
     DisableCompression:    false,
-    DisableKeepAlives:     false,
-    MaxIdleConnsPerHost:   20,
+    DisableKeepAlives:     true,
+    MaxIdleConnsPerHost:   0,
   }
 
   client := &http.Client{
