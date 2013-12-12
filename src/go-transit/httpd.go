@@ -173,7 +173,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     ResponseHeaderTimeout: time.Duration(response_timeout) * time.Second,
     DisableCompression:    false,
     DisableKeepAlives:     true,
-    MaxIdleConnsPerHost:   0,
+    MaxIdleConnsPerHost:   2,
   }
   defer transport.CloseIdleConnections()
 
@@ -193,7 +193,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     show_error(w, http.StatusMethodNotAllowed, []byte("MethodNotAllowed"))
     return
   }
-  defer func() { req.Close = true }()
+  req.Close = true
 
   header_copy(r.Header, &req.Header)
 
@@ -204,15 +204,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   resp, err := client.Do(req)
+  defer resp.Body.Close()
+
   if err != nil {
     g_env.ErrorLog.Println(req, err)
     show_error(w, http.StatusInternalServerError, []byte(err.Error()))
     return
   }
 
-  defer resp.Body.Close()
   for hk, _ := range resp.Header {
     w.Header().Set(hk, resp.Header.Get(hk))
+  }
+  w.Header().Set("X-Transit-Ver", "0.0.1")
+  
+  if len(w.Header().Get("Server")) == 0 {
+    w.Header().Set("Server", "X-Transit")
   }
 
   w.WriteHeader(resp.StatusCode)
