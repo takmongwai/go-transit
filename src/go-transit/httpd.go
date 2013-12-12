@@ -173,7 +173,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     ResponseHeaderTimeout: time.Duration(response_timeout) * time.Second,
     DisableCompression:    false,
     DisableKeepAlives:     true,
-    MaxIdleConnsPerHost:   0,
+    MaxIdleConnsPerHost:   2,
   }
 
   client := &http.Client{
@@ -192,7 +192,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
     show_error(w, http.StatusMethodNotAllowed, []byte("MethodNotAllowed"))
     return
   }
-  defer func() { req.Close = true }()
+
+  req.Close = true
 
   header_copy(r.Header, &req.Header)
 
@@ -210,9 +211,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   defer resp.Body.Close()
+
   for hk, _ := range resp.Header {
     w.Header().Set(hk, resp.Header.Get(hk))
   }
+	w.Header().Set("Connection","close")
+	w.Header().Set("X-Transit","0.0.1")
 
   w.WriteHeader(resp.StatusCode)
   io.Copy(w, resp.Body)
