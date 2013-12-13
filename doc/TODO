@@ -8,7 +8,4 @@
     x.x.x.x/xx  xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx-xxx.xxx.xxx.xxx 等
 
 1. 可分别对前端和后端做 gzip 支持
-
-
-
-对后端的请求以及对参数 rul的判断需要重写。 post 的时候有问题，r.Boby 在 parseQuerys 之后就变空了。
+1. 配置文件添加变量支持,如 "$var_host_google":"http://www.google.com/",然后在配置文件中的其他地方就可以用 $_var_host_google 替代 "http://www.google.com/"
