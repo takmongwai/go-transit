@@ -28,6 +28,7 @@ all: build
 	
 build:
 	$(GOBUILD) -o $(PWD)/bin/$(TOP_PKG)_$(shell date +%Y%m%d%H%M%S) $(TOP_PKG)
+	ln -sf $(PWD)/bin/$(TOP_PKG)_$(shell date +%Y%m%d%H%M%S) $(PWD)/bin/$(TOP_PKG) 
 
 clean:
 	$(GOCLEAN) $(TOP_PKG)

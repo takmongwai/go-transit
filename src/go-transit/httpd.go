@@ -24,28 +24,47 @@ func header_copy(s http.Header, d *http.Header) {
 }
 
 func access_log(w http.ResponseWriter, r *http.Request, query_url string, startTime time.Time) {
-
   remoteAddr := strings.Split(r.RemoteAddr, ":")[0] //客户端地址
+
+  switch {
+  case len(r.Header.Get("X-Real-Ip")) > 0:
+    remoteAddr = r.Header.Get("X-Real-Ip")
+  case len(r.Header.Get("Remote-Addr")) > 0:
+    remoteAddr = r.Header.Get("Remote-Addr")
+  case len(r.Header.Get("X-Forwarded-For")) > 0:
+    remoteAddr = r.Header.Get("X-Forwarded-For")
+  }
+
   if remoteAddr == "[" || len(remoteAddr) == 0 {
     remoteAddr = "127.0.0.1"
   }
+
   r.ParseForm()
   var postValues []string
   for k, _ := range r.PostForm {
     postValues = append(postValues, fmt.Sprintf("%s=%s", k, r.FormValue(k)))
   }
+
   if len(postValues) == 0 {
     postValues = append(postValues, "-")
   }
-  logLine := fmt.Sprintf(`%s [%s] S:"%s %s F:{%s} %s %s" D:"%s" %.05fs`,
+
+  content_len := w.Header().Get("Content-Length")
+  if len(content_len) == 0 {
+    content_len = "-"
+  }
+
+  logLine := fmt.Sprintf(`[%s] [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s} %s %s",%0.5fs`,
     remoteAddr,
     time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
     r.Method,
     r.RequestURI,
-    strings.Join(postValues, "&"),
     r.Proto,
-    w.Header().Get("Content-Length"),
-    fmt.Sprintf("%s F:{%s}", query_url, strings.Join(postValues, "&")),
+    strings.Join(postValues, "&"),
+    query_url,
+    strings.Join(postValues, "&"),
+    w.Header().Get("Status"),
+    content_len,
     time.Now().Sub(startTime).Seconds(),
   )
   g_env.AccessLog.Println(logLine)
@@ -129,8 +148,7 @@ func handler_func(w http.ResponseWriter, r *http.Request) {
     conntction_timeout, response_timeout int
     req                                  *http.Request
     err                                  error
-    //raw_body                             []byte
-    raw_query []string //get ,post params
+    raw_query                            []string
   )
   defer func() {
     if re := recover(); re != nil {
@@ -226,13 +244,9 @@ func Run() {
   s := &http.Server{
     Addr:           fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port),
     Handler:        http.HandlerFunc(handler_func),
-    ReadTimeout:    10 * time.Second,
-    WriteTimeout:   10 * time.Second,
+    ReadTimeout:    60 * time.Second,
+    WriteTimeout:   60 * time.Second,
     MaxHeaderBytes: 1 << 20,
   }
-  //http.HandleFunc("/", handler)
-  //if err := http.ListenAndServe(fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port), nil); err != nil {
-  //log.Fatal(err)
-  //}
   log.Fatal(s.ListenAndServe())
 }
