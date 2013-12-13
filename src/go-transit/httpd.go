@@ -113,16 +113,20 @@ func target_server(cfg *config.Config) (s string) {
 获取查询参数并做替换
 */
 func swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
+  var tmpSlice []string
   if len(cfg.TargetParamNameSwap) == 0 {
-    q = r.URL.RawQuery
+    for k, _ := range r.URL.Query() {
+      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", k, url.QueryEscape(r.URL.Query().Get(k))))
+    }
+    q = strings.Join(tmpSlice, "&")
     return
   }
-  var tmpSlice []string
+
   for k, _ := range r.URL.Query() {
     if v, ok := cfg.TargetParamNameSwap[k]; ok {
-      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", v, r.URL.Query().Get(k)))
+      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", v, url.QueryEscape(r.URL.Query().Get(k))))
     } else {
-      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", k, r.URL.Query().Get(k)))
+      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", k, url.QueryEscape(r.URL.Query().Get(k))))
     }
   }
   q = strings.Join(tmpSlice, "&")
