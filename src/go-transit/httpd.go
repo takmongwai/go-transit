@@ -244,8 +244,8 @@ func Run() {
   s := &http.Server{
     Addr:           fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port),
     Handler:        http.HandlerFunc(handler_func),
-    ReadTimeout:    60 * time.Second,
-    WriteTimeout:   60 * time.Second,
+    ReadTimeout:    15 * time.Second,
+    WriteTimeout:   15 * time.Second,
     MaxHeaderBytes: 1 << 20,
   }
   log.Fatal(s.ListenAndServe())
