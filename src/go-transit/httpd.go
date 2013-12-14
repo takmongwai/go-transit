@@ -14,6 +14,26 @@ import (
   "time"
 )
 
+const (
+  CLR_N = "\x1b[0m"
+  /* you use codes 30+i to specify foreground color, 40+i to specify background color */
+  BLACK   = 0
+  RED     = 1
+  GREEN   = 2
+  YELLO   = 3
+  BLUE    = 4
+  MAGENTA = 5
+  CYAN    = 6
+  WHITE   = 7
+)
+
+//返回ANSI 控制台颜色格式的字符串
+//bc 背景颜色
+//fc 前景(文字)颜色
+func ansi_color(bc int, fc int, s string) string {
+  return fmt.Sprintf("\x1b[%d;%dm %s %s", 40+bc, 30+fc, s, CLR_N)
+}
+
 /**
 http Header Copay
 */
@@ -55,14 +75,14 @@ func access_log(w http.ResponseWriter, r *http.Request, query_url string, startT
   }
 
   logLine := fmt.Sprintf(`[%s] [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s} %s %s",%0.5fs`,
-    remoteAddr,
+    ansi_color(WHITE, BLACK, remoteAddr),
     time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
     r.Method,
-    r.RequestURI,
+    ansi_color(GREEN, BLACK, r.RequestURI),
     r.Proto,
-    strings.Join(postValues, "&"),
-    query_url,
-    strings.Join(postValues, "&"),
+    ansi_color(GREEN, BLACK, strings.Join(postValues, "&")),
+    ansi_color(CYAN, BLACK, query_url),
+    ansi_color(CYAN, BLACK, strings.Join(postValues, "&")),
     w.Header().Get("Status"),
     content_len,
     time.Now().Sub(startTime).Seconds(),
