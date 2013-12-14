@@ -31,7 +31,7 @@ const (
 //bc 背景颜色
 //fc 前景(文字)颜色
 func ansi_color(bc int, fc int, s string) string {
-  return fmt.Sprintf("\x1b[%d;%dm %s %s", 40+bc, 30+fc, s, CLR_N)
+  return fmt.Sprintf("\x1b[%d;%dm%s%s", 40+bc, 30+fc, s, CLR_N)
 }
 
 /**
