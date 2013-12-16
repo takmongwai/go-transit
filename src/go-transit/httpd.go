@@ -163,6 +163,9 @@ func swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
   var tmp_slice []string
   raw_querys := parse_query_values(r)
   append_slict := func(key string, value string) {
+    if len(key) == 0 {
+      return
+    }
     tmp_slice = append(tmp_slice, fmt.Sprintf("%s=%s", key, value))
   }
   if len(cfg.TargetParamNameSwap) == 0 {
