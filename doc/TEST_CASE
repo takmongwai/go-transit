@@ -26,3 +26,13 @@ curl -vvv --referer "http://www.google.com/path/file/a?params=100" -d "postn=1&p
 
 curl  -vvv --referer "http://www.google.com/?DeviceID=fe19bbb14ce0b12512cf726661507dc4" "http://127.0.0.1:9000/ticket/req.do?processcode=11002&city=10"
 curl "http://127.0.0.1:9000/ticket/req.do?processcode=11002&city=10&DeviceID=fe19bbb14ce0b12512cf726661507dc4"
+
+
+
+curl -vv -d "processcode=11002&city=10" "http://cmb.funguide.com.cn:8080/ticket/req.do?aaa=99999999&你好=你好"
+curl -vv -d "processcode=11002&city=10" "http://10.214.0.102:8081/ticket/req.do?aaa=99999999&你好=你好"
+curl -vv -d "processcode=11002&city=10" "http://192.168.0.212:8282/ticket/req.do?aaa=99999999&你好=你好"
+
+curl -vv -d "processcode=GetCityListNewAction" "http://localhost:9000/ticket/req.do"
+
+curl -vv -d "processcode=GetCityListNewAction&a=100;mobile=100;ccc=100" "http://localhost:9000/ticket/req.do?hello=你好;hhhh=100"

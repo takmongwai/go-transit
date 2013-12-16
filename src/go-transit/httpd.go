@@ -62,7 +62,7 @@ func access_log(w http.ResponseWriter, r *http.Request, query_url string, startT
   r.ParseForm()
   var postValues []string
   for k, _ := range r.PostForm {
-    postValues = append(postValues, fmt.Sprintf("%s=%s", k, r.FormValue(k)))
+    postValues = append(postValues, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.FormValue(k))))
   }
 
   if len(postValues) == 0 {
@@ -81,8 +81,8 @@ func access_log(w http.ResponseWriter, r *http.Request, query_url string, startT
     ansi_color(GREEN, BLACK, r.RequestURI),
     r.Proto,
     ansi_color(GREEN, BLACK, strings.Join(postValues, "&")),
-    ansi_color(CYAN, BLACK, query_url),
-    ansi_color(CYAN, BLACK, strings.Join(postValues, "&")),
+    ansi_color(YELLO, BLACK, query_url),
+    ansi_color(YELLO, BLACK, strings.Join(postValues, "&")),
     w.Header().Get("Status"),
     content_len,
     time.Now().Sub(startTime).Seconds(),
@@ -93,12 +93,12 @@ func access_log(w http.ResponseWriter, r *http.Request, query_url string, startT
 func parse_querys(r *http.Request) (raw_query []string) {
   r.ParseForm()
   for k, _ := range r.Form {
-    raw_query = append(raw_query, fmt.Sprintf("%s=%s", k, r.Form.Get(k)))
+    raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.Form.Get(k))))
   }
   if len(r.Referer()) > 0 {
     if uri, err := url.Parse(r.Referer()); err == nil {
       for k, _ := range uri.Query() {
-        raw_query = append(raw_query, fmt.Sprintf("%s=%s", k, uri.Query().Get(k)))
+        raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(uri.Query().Get(k))))
       }
     }
   }
@@ -129,27 +129,91 @@ func target_server(cfg *config.Config) (s string) {
   return
 }
 
+func parse_query_key_value(v string) (kv map[string]string) {
+  kv = make(map[string]string)
+  var _k, _v string
+  si := strings.IndexByte(v, '=')
+  if si < 0 {
+    _k = v
+  } else {
+    _k = v[0:si]
+    if si+1 <= len(v) {
+      _v = v[si+1:]
+    }
+  }
+  kv[url.QueryEscape(_k)] = url.QueryEscape(_v)
+  return
+}
+
+/**
+标准的 http 协议，会将 & 和 ;看成参数对的分割符
+*/
+func parse_query_values(r *http.Request) (vs []map[string]string) {
+  for _, v := range strings.Split(r.URL.RawQuery, "&") {
+    vs = append(vs, parse_query_key_value(v))
+  }
+  return
+}
+
 /**
 获取查询参数并做替换
+对GET参数不做标准分割 &; 这两个字符
 */
 func swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
-  var tmpSlice []string
+  var tmp_slice []string
+  raw_querys := parse_query_values(r)
+  append_slict := func(key string, value string) {
+    tmp_slice = append(tmp_slice, fmt.Sprintf("%s=%s", key, value))
+  }
+  if len(cfg.TargetParamNameSwap) == 0 {
+    for _, vs := range raw_querys {
+      for k1, v1 := range vs {
+        append_slict(k1, v1)
+      }
+    }
+    q = strings.Join(tmp_slice, "&")
+    return
+  }
+
+  for _, vs := range raw_querys {
+    for k1, v1 := range vs {
+      if k2, ok := cfg.TargetParamNameSwap[k1]; ok {
+        append_slict(k2, v1)
+      } else {
+        append_slict(k1, v1)
+      }
+    }
+  }
+
+  q = strings.Join(tmp_slice, "&")
+  return
+}
+
+/*
+标准http解析库实现
+*/
+func _swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
+  var tmp_slice []string
+  append_slict := func(key string, value string) {
+    tmp_slice = append(tmp_slice, fmt.Sprintf("%s=%s", url.QueryEscape(key), url.QueryEscape(r.URL.Query().Get(value))))
+  }
+  //如果配置段没有需要交换的参数,则直接返回查询字符串
   if len(cfg.TargetParamNameSwap) == 0 {
     for k, _ := range r.URL.Query() {
-      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", k, url.QueryEscape(r.URL.Query().Get(k))))
+      append_slict(k, k)
     }
-    q = strings.Join(tmpSlice, "&")
+    q = strings.Join(tmp_slice, "&")
     return
   }
 
   for k, _ := range r.URL.Query() {
     if v, ok := cfg.TargetParamNameSwap[k]; ok {
-      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", v, url.QueryEscape(r.URL.Query().Get(k))))
+      append_slict(v, k)
     } else {
-      tmpSlice = append(tmpSlice, fmt.Sprintf("%s=%s", k, url.QueryEscape(r.URL.Query().Get(k))))
+      append_slict(k, k)
     }
   }
-  q = strings.Join(tmpSlice, "&")
+  q = strings.Join(tmp_slice, "&")
   return
 }
 
