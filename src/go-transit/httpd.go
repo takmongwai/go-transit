@@ -10,7 +10,10 @@ import (
   "net"
   "net/http"
   "net/url"
+  "os"
+  "os/signal"
   "strings"
+  "syscall"
   "time"
 )
 
@@ -26,6 +29,9 @@ const (
   CYAN    = 6
   WHITE   = 7
 )
+
+type Server struct {
+}
 
 //返回ANSI 控制台颜色格式的字符串
 //bc 背景颜色
@@ -232,7 +238,7 @@ func timeout_dialer(conn_timeout int, rw_timeout int) func(net, addr string) (c 
   }
 }
 
-func handler_func(w http.ResponseWriter, r *http.Request) {
+func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   var (
     cfg                                  *config.Config
     cfg_err                              *config.ConfigErr
@@ -319,25 +325,35 @@ func handler_func(w http.ResponseWriter, r *http.Request) {
     w.Header().Set(hk, resp.Header.Get(hk))
   }
   w.Header().Set("X-Transit-Ver", "0.0.1")
-
-  if len(w.Header().Get("Server")) == 0 {
-    w.Header().Set("Server", "X-Transit")
-  }
+  w.Header().Set("Server", "X-Transit")
 
   w.WriteHeader(resp.StatusCode)
   io.Copy(w, resp.Body)
   access_log(w, r, query_url.String(), start_at)
 }
 
+//TODO
+// add unix socket listener
+
 func Run() {
   g_env.ErrorLog.Printf("start@ %s:%d %v \n", g_config.Listen.Host, g_config.Listen.Port, time.Now())
   fmt.Printf("start@ %s:%d %v \n", g_config.Listen.Host, g_config.Listen.Port, time.Now())
-  s := &http.Server{
-    Addr:           fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port),
-    Handler:        http.HandlerFunc(handler_func),
-    ReadTimeout:    15 * time.Second,
-    WriteTimeout:   15 * time.Second,
-    MaxHeaderBytes: 1 << 20,
-  }
-  log.Fatal(s.ListenAndServe())
+
+  sigchan := make(chan os.Signal, 1)
+  signal.Notify(sigchan, os.Interrupt)
+  signal.Notify(sigchan, syscall.SIGTERM)
+
+  server := Server{}
+  go func() {
+    s := &http.Server{
+      Addr:           fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port),
+      Handler:        http.HandlerFunc(server.handler_func),
+      ReadTimeout:    120 * time.Second,
+      WriteTimeout:   120 * time.Second,
+      MaxHeaderBytes: 1 << 20,
+    }
+    log.Fatal(s.ListenAndServe())
+  }()
+
+  <-sigchan
 }
