@@ -4,7 +4,6 @@ import (
   "config"
   "flag"
   "fmt"
-  "github.com/weidewang/go-strftime"
   "log"
   "os"
   "path/filepath"
@@ -132,8 +131,7 @@ func file_logger(log_path string) (logger *log.Logger) {
   init_dir(filepath.Dir(log_path))
   if out, err := os.OpenFile(log_path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend|0666); err == nil {
     logger = log.New(out, "", 0)
-    now := time.Now()
-    logger.Printf("#start at: %s\n", strftime.Strftime(&now, "%Y-%m-%d %H:%M:%S"))
+    logger.Printf("#start at: %s\n", time.Now())
   } else {
     log.Fatal(err)
   }
