@@ -98,13 +98,23 @@ func access_log(w http.ResponseWriter, r *http.Request, query_url string, startT
 
 func parse_querys(r *http.Request) (raw_query []string) {
   r.ParseForm()
-  for k, _ := range r.Form {
-    raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.Form.Get(k))))
+  check_key_map := make(map[string]bool)
+  check_and_append := func(_k, _v string) {
+    if _, ok := check_key_map[_k]; ok {
+      return
+    }
+    check_key_map[_k] = true
+    raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(_k), url.QueryEscape(_v)))
   }
+
+  for k, _ := range r.Form {
+    check_and_append(k, r.Form.Get(k))
+  }
+
   if len(r.Referer()) > 0 {
     if uri, err := url.Parse(r.Referer()); err == nil {
       for k, _ := range uri.Query() {
-        raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(uri.Query().Get(k))))
+        check_and_append(k, uri.Query().Get(k))
       }
     }
   }
@@ -340,7 +350,7 @@ func Run() {
   fmt.Printf("start@ %s:%d %v \n", g_config.Listen.Host, g_config.Listen.Port, time.Now())
 
   sigchan := make(chan os.Signal, 1)
-  signal.Notify(sigchan, os.Interrupt,syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT)
+  signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT)
 
   server := Server{}
   go func() {
