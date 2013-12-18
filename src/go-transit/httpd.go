@@ -165,7 +165,7 @@ func parse_query_values(r *http.Request) (vs []map[string]string) {
 获取查询参数并做替换
 对GET参数不做标准分割 &; 这两个字符
 */
-func swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
+func __swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
   var tmp_slice []string
   raw_querys := parse_query_values(r)
   append_slict := func(key string, value string) {
@@ -201,7 +201,7 @@ func swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
 /*
 标准http解析库实现
 */
-func _swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
+func swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
   var tmp_slice []string
   append_slict := func(key string, value string) {
     tmp_slice = append(tmp_slice, fmt.Sprintf("%s=%s", url.QueryEscape(key), url.QueryEscape(r.URL.Query().Get(value))))
@@ -340,8 +340,7 @@ func Run() {
   fmt.Printf("start@ %s:%d %v \n", g_config.Listen.Host, g_config.Listen.Port, time.Now())
 
   sigchan := make(chan os.Signal, 1)
-  signal.Notify(sigchan, os.Interrupt)
-  signal.Notify(sigchan, syscall.SIGTERM)
+  signal.Notify(sigchan, os.Interrupt,syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT)
 
   server := Server{}
   go func() {

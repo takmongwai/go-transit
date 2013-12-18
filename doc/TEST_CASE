@@ -36,3 +36,7 @@ curl -vv -d "processcode=11002&city=10" "http://192.168.0.212:8282/ticket/req.do
 curl -vv -d "processcode=GetCityListNewAction" "http://localhost:9000/ticket/req.do"
 
 curl -vv -d "processcode=GetCityListNewAction&a=100;mobile=100;ccc=100" "http://localhost:9000/ticket/req.do?hello=你好;hhhh=100"
+
+curl -H 'Accept-Encoding: gzip,deflate' -vv -d "processcode=GetCityListNewAction&a=100;mobile=100;ccc=100" "http://localhost:9000/ticket/req.do?a=10&b=100&caaaaz=Ahahah;hello=你好;hhhh=100&VVVV&BVBV=MN"
+
+curl -H 'Accept-Encoding: gzip,deflate' -vv -d "processcode=GetCityListNewAction&a=100;mobile=100;ccc=100" "http://localhost:9000/ticket/req.do?a=10&b=100&caaaaz=Ahahah;hello=你好;hhhh=100&VVVV&BVBV=MN" | gzip -d
