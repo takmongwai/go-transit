@@ -3,15 +3,18 @@ package main
 import (
   "bytes"
   "config"
+  "crypto/md5"
   "fmt"
   "io"
   _ "io/ioutil"
   "log"
+  "math/rand"
   "net"
   "net/http"
   "net/url"
   "os"
   "os/signal"
+  "strconv"
   "strings"
   "syscall"
   "time"
@@ -49,30 +52,71 @@ func header_copy(s http.Header, d *http.Header) {
   }
 }
 
-func access_log(w http.ResponseWriter, r *http.Request, query_url string, startTime time.Time) {
-  remoteAddr := strings.Split(r.RemoteAddr, ":")[0] //客户端地址
+func access_id(as string) string {
+  md5 := func(s string) string {
+    hash_md5 := md5.New()
+    io.WriteString(hash_md5, s)
+    return fmt.Sprintf("%x", hash_md5.Sum(nil))
+  }
+  nano := time.Now().UnixNano()
+  rand.Seed(nano)
+  rnd_num := rand.Int63()
+  fs := md5(md5(as) + md5(strconv.FormatInt(nano, 10)) + md5(strconv.FormatInt(rnd_num, 10)))
+  return strings.ToUpper(fmt.Sprintf("%s.%s", fs[0:4], fs[28:]))
+}
 
+func access_ip(r *http.Request) string {
+  remote_addr := strings.Split(r.RemoteAddr, ":")[0] //客户端地址
   switch {
   case len(r.Header.Get("X-Real-Ip")) > 0:
-    remoteAddr = r.Header.Get("X-Real-Ip")
+    remote_addr = r.Header.Get("X-Real-Ip")
   case len(r.Header.Get("Remote-Addr")) > 0:
-    remoteAddr = r.Header.Get("Remote-Addr")
+    remote_addr = r.Header.Get("Remote-Addr")
   case len(r.Header.Get("X-Forwarded-For")) > 0:
-    remoteAddr = r.Header.Get("X-Forwarded-For")
+    remote_addr = r.Header.Get("X-Forwarded-For")
   }
 
-  if remoteAddr == "[" || len(remoteAddr) == 0 {
-    remoteAddr = "127.0.0.1"
+  if remote_addr == "[" || len(remote_addr) == 0 {
+    remote_addr = "127.0.0.1"
   }
+  return remote_addr
+}
 
+func post_values(r *http.Request) (ps []string) {
   r.ParseForm()
-  var postValues []string
   for k, _ := range r.PostForm {
-    postValues = append(postValues, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.FormValue(k))))
+    ps = append(ps, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.FormValue(k))))
   }
+  return
+}
 
-  if len(postValues) == 0 {
-    postValues = append(postValues, "-")
+//access begin logger
+func access_log_begin(aid string, r *http.Request, query_url string) {
+  post_values := post_values(r)
+
+  if len(post_values) == 0 {
+    post_values = append(post_values, "-")
+  }
+  log_line := fmt.Sprintf(`Begin [%s] "%s" [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s}"`,
+    ansi_color(WHITE, BLACK, access_ip(r)),
+    ansi_color(WHITE, RED, aid),
+    time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+    r.Method,
+    ansi_color(GREEN, BLACK, r.RequestURI),
+    r.Proto,
+    ansi_color(GREEN, BLACK, strings.Join(post_values, "&")),
+    ansi_color(YELLO, BLACK, query_url),
+    ansi_color(YELLO, BLACK, strings.Join(post_values, "&")),
+  )
+  g_env.AccessLog.Println(log_line)
+}
+
+//transit complete logger
+func access_log(aid string, w http.ResponseWriter, r *http.Request, query_url string, startTime time.Time) {
+  post_values := post_values(r)
+
+  if len(post_values) == 0 {
+    post_values = append(post_values, "-")
   }
 
   content_len := w.Header().Get("Content-Length")
@@ -80,20 +124,21 @@ func access_log(w http.ResponseWriter, r *http.Request, query_url string, startT
     content_len = "-"
   }
 
-  logLine := fmt.Sprintf(`[%s] [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s} %s %s",%0.5fs`,
-    ansi_color(WHITE, BLACK, remoteAddr),
+  log_line := fmt.Sprintf(`Complete [%s] "%s" [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s} %s %s",%0.5fs`,
+    ansi_color(WHITE, BLACK, access_ip(r)),
+    ansi_color(WHITE, RED, aid),
     time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
     r.Method,
     ansi_color(GREEN, BLACK, r.RequestURI),
     r.Proto,
-    ansi_color(GREEN, BLACK, strings.Join(postValues, "&")),
+    ansi_color(GREEN, BLACK, strings.Join(post_values, "&")),
     ansi_color(YELLO, BLACK, query_url),
-    ansi_color(YELLO, BLACK, strings.Join(postValues, "&")),
+    ansi_color(YELLO, BLACK, strings.Join(post_values, "&")),
     w.Header().Get("Status"),
     content_len,
     time.Now().Sub(startTime).Seconds(),
   )
-  g_env.AccessLog.Println(logLine)
+  g_env.AccessLog.Println(log_line)
 }
 
 func parse_querys(r *http.Request) (raw_query []string) {
@@ -142,69 +187,6 @@ func target_server(cfg *config.Config) (s string) {
   } else {
     s = g_config.Default.TargetServer
   }
-  return
-}
-
-func parse_query_key_value(v string) (kv map[string]string) {
-  kv = make(map[string]string)
-  var _k, _v string
-  si := strings.IndexByte(v, '=')
-  if si < 0 {
-    _k = v
-  } else {
-    _k = v[0:si]
-    if si+1 <= len(v) {
-      _v = v[si+1:]
-    }
-  }
-  kv[url.QueryEscape(_k)] = url.QueryEscape(_v)
-  return
-}
-
-/**
-标准的 http 协议，会将 & 和 ;看成参数对的分割符
-*/
-func parse_query_values(r *http.Request) (vs []map[string]string) {
-  for _, v := range strings.Split(r.URL.RawQuery, "&") {
-    vs = append(vs, parse_query_key_value(v))
-  }
-  return
-}
-
-/**
-获取查询参数并做替换
-对GET参数不做标准分割 &; 这两个字符
-*/
-func __swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
-  var tmp_slice []string
-  raw_querys := parse_query_values(r)
-  append_slict := func(key string, value string) {
-    if len(key) == 0 {
-      return
-    }
-    tmp_slice = append(tmp_slice, fmt.Sprintf("%s=%s", key, value))
-  }
-  if len(cfg.TargetParamNameSwap) == 0 {
-    for _, vs := range raw_querys {
-      for k1, v1 := range vs {
-        append_slict(k1, v1)
-      }
-    }
-    q = strings.Join(tmp_slice, "&")
-    return
-  }
-
-  for _, vs := range raw_querys {
-    for k1, v1 := range vs {
-      if k2, ok := cfg.TargetParamNameSwap[k1]; ok {
-        append_slict(k2, v1)
-      } else {
-        append_slict(k1, v1)
-      }
-    }
-  }
-
-  q = strings.Join(tmp_slice, "&")
   return
 }
 
@@ -267,6 +249,7 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
 
   start_at := time.Now()
   raw_query = parse_querys(r)
+  aid := access_id(r.RequestURI)
 
   if err != nil {
     g_env.ErrorLog.Println(req, err)
@@ -301,6 +284,8 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   }
 
   query_url, _ := url.Parse(target_server(cfg) + target_path(r, cfg) + "?" + swap_raw_query(r, cfg))
+
+  access_log_begin(aid, r, query_url.String())
 
   switch r.Method {
   case "GET", "HEAD":
@@ -339,7 +324,7 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
 
   w.WriteHeader(resp.StatusCode)
   io.Copy(w, resp.Body)
-  access_log(w, r, query_url.String(), start_at)
+  access_log(aid, w, r, query_url.String(), start_at)
 }
 
 //TODO
