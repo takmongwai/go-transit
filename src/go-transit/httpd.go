@@ -6,7 +6,7 @@ import (
   "crypto/md5"
   "fmt"
   "io"
-  _ "io/ioutil"
+  "io/ioutil"
   "log"
   "math/rand"
   "net"
@@ -82,20 +82,11 @@ func access_ip(r *http.Request) string {
   return remote_addr
 }
 
-func post_values(r *http.Request) (ps []string) {
-  r.ParseForm()
-  for k, _ := range r.PostForm {
-    ps = append(ps, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.FormValue(k))))
-  }
-  return
-}
-
 //access begin logger
-func access_log_begin(aid string, r *http.Request, query_url string) {
-  post_values := post_values(r)
+func access_log_begin(aid string, r *http.Request, query_url string, post_query []string) {
 
-  if len(post_values) == 0 {
-    post_values = append(post_values, "-")
+  if len(post_query) == 0 {
+    post_query = append(post_query, "-")
   }
   log_line := fmt.Sprintf(`Begin [%s] "%s" [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s}"`,
     ansi_color(WHITE, BLACK, access_ip(r)),
@@ -104,19 +95,18 @@ func access_log_begin(aid string, r *http.Request, query_url string) {
     r.Method,
     ansi_color(GREEN, BLACK, r.RequestURI),
     r.Proto,
-    ansi_color(GREEN, BLACK, strings.Join(post_values, "&")),
+    ansi_color(GREEN, BLACK, strings.Join(post_query, "&")),
     ansi_color(YELLO, BLACK, query_url),
-    ansi_color(YELLO, BLACK, strings.Join(post_values, "&")),
+    ansi_color(YELLO, BLACK, strings.Join(post_query, "&")),
   )
   g_env.AccessLog.Println(log_line)
 }
 
 //transit complete logger
-func access_log(aid string, w http.ResponseWriter, r *http.Request, query_url string, startTime time.Time) {
-  post_values := post_values(r)
+func access_log(aid string, w http.ResponseWriter, r *http.Request, query_url string, post_query []string, startTime time.Time) {
 
-  if len(post_values) == 0 {
-    post_values = append(post_values, "-")
+  if len(post_query) == 0 {
+    post_query = append(post_query, "-")
   }
 
   content_len := w.Header().Get("Content-Length")
@@ -131,39 +121,14 @@ func access_log(aid string, w http.ResponseWriter, r *http.Request, query_url st
     r.Method,
     ansi_color(GREEN, BLACK, r.RequestURI),
     r.Proto,
-    ansi_color(GREEN, BLACK, strings.Join(post_values, "&")),
+    ansi_color(GREEN, BLACK, strings.Join(post_query, "&")),
     ansi_color(YELLO, BLACK, query_url),
-    ansi_color(YELLO, BLACK, strings.Join(post_values, "&")),
+    ansi_color(YELLO, BLACK, strings.Join(post_query, "&")),
     w.Header().Get("Status"),
     content_len,
     time.Now().Sub(startTime).Seconds(),
   )
   g_env.AccessLog.Println(log_line)
-}
-
-func parse_querys(r *http.Request) (raw_query []string) {
-  r.ParseForm()
-  check_key_map := make(map[string]bool)
-  check_refer_and_append := func(_k, _v string) {
-    if _, ok := check_key_map[_k]; ok {
-      return
-    }
-    check_key_map[_k] = true
-    raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(_k), url.QueryEscape(_v)))
-  }
-
-  for k, _ := range r.Form {
-    raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.Form.Get(k))))
-  }
-
-  if len(r.Referer()) > 0 {
-    if uri, err := url.Parse(r.Referer()); err == nil {
-      for k, _ := range uri.Query() {
-        check_refer_and_append(k, uri.Query().Get(k))
-      }
-    }
-  }
-  return
 }
 
 /**
@@ -191,27 +156,29 @@ func target_server(cfg *config.Config) (s string) {
 }
 
 /*
-标准http解析库实现
+做参数替换,只对 url 参数进行替换,post的参数不做处理
 */
 func swap_raw_query(r *http.Request, cfg *config.Config) (q string) {
   var tmp_slice []string
-  append_slict := func(key string, value string) {
-    tmp_slice = append(tmp_slice, fmt.Sprintf("%s=%s", url.QueryEscape(key), url.QueryEscape(r.URL.Query().Get(value))))
+  append_slice := func(_k, _v string) {
+    tmp_slice = append(tmp_slice, fmt.Sprintf("%s=%s", url.QueryEscape(_k), url.QueryEscape(_v)))
   }
-  //如果配置段没有需要交换的参数,则直接返回查询字符串
   if len(cfg.TargetParamNameSwap) == 0 {
-    for k, _ := range r.URL.Query() {
-      append_slict(k, k)
+    for k, v := range r.URL.Query() {
+      for _, sv := range v {
+        append_slice(k, sv)
+      }
     }
     q = strings.Join(tmp_slice, "&")
     return
   }
-
-  for k, _ := range r.URL.Query() {
-    if v, ok := cfg.TargetParamNameSwap[k]; ok {
-      append_slict(v, k)
-    } else {
-      append_slict(k, k)
+  for k, v := range r.URL.Query() {
+    for _, sv := range v {
+      if rv, ok := cfg.TargetParamNameSwap[k]; ok {
+        append_slice(rv, sv)
+      } else {
+        append_slice(k, sv)
+      }
     }
   }
   q = strings.Join(tmp_slice, "&")
@@ -230,6 +197,40 @@ func timeout_dialer(conn_timeout int, rw_timeout int) func(net, addr string) (c 
   }
 }
 
+func referer_values(r *http.Request) (ps []string) {
+  if len(r.Referer()) > 0 {
+    if uri, err := url.Parse(r.Referer()); err == nil {
+      for k, v := range uri.Query() {
+        for _, sv := range v {
+          ps = append(ps, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(sv)))
+        }
+      }
+    }
+  }
+  return
+}
+
+func post_values(r *http.Request) (ps []string) {
+  if raw_bytes, err := ioutil.ReadAll(r.Body); err == nil {
+    body_buffer := bytes.NewBuffer(raw_bytes)
+    ps = strings.Split(body_buffer.String(), "&")
+  }
+  return
+}
+
+func merge_querys(gs []string, ps []string, rs []string) (ms []string) {
+  for _, v := range gs {
+    ms = append(ms, v)
+  }
+  for _, v := range ps {
+    ms = append(ms, v)
+  }
+  for _, v := range rs {
+    ms = append(ms, v)
+  }
+  return
+}
+
 func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   var (
     cfg                                  *config.Config
@@ -237,18 +238,22 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
     conntction_timeout, response_timeout int
     req                                  *http.Request
     err                                  error
-    raw_query                            []string
+    post_query                           []string
+    get_post_referer                     []string
   )
   defer func() {
     if re := recover(); re != nil {
       g_env.ErrorLog.Println("Recovered in backendServer:", re)
     }
   }()
+  //取Post值,不做修改
+  post_query = post_values(r)
+  //取url,post,referer中所包含的请求参数,只用于转发查找
+  get_post_referer = merge_querys(strings.Split(r.URL.RawQuery, "&"), post_query, referer_values(r))
 
   defer r.Body.Close()
 
   start_at := time.Now()
-  raw_query = parse_querys(r)
   aid := access_id(r.RequestURI)
 
   if err != nil {
@@ -258,8 +263,8 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   }
 
   //获取配置文件
-  if cfg, cfg_err = g_config.FindBySourcePathAndParams(raw_query, r.URL.Path); cfg_err != nil {
-    cfg = g_config.FindByParamsOrSourcePath(raw_query, r.URL.Path)
+  if cfg, cfg_err = g_config.FindBySourcePathAndParams(get_post_referer, r.URL.Path); cfg_err != nil {
+    cfg = g_config.FindByParamsOrSourcePath(get_post_referer, r.URL.Path)
   }
 
   if conntction_timeout = cfg.ConnectionTimeout; conntction_timeout <= 0 {
@@ -285,13 +290,13 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
 
   query_url, _ := url.Parse(target_server(cfg) + target_path(r, cfg) + "?" + swap_raw_query(r, cfg))
 
-  access_log_begin(aid, r, query_url.String())
+  access_log_begin(aid, r, query_url.String(), post_query)
 
   switch r.Method {
   case "GET", "HEAD":
     req, err = http.NewRequest(r.Method, query_url.String(), nil)
   case "POST":
-    req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewBufferString(strings.Join(raw_query, "&")))
+    req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewBufferString(strings.Join(post_query, "&")))
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
   default:
     http.Error(w, "MethodNotAllowed", http.StatusMethodNotAllowed)
@@ -319,12 +324,12 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   for hk, _ := range resp.Header {
     w.Header().Set(hk, resp.Header.Get(hk))
   }
-  w.Header().Set("X-Transit-Ver", "0.0.1")
+  w.Header().Set("X-Transit-Ver", "0.0.2")
   w.Header().Set("Server", "X-Transit")
 
   w.WriteHeader(resp.StatusCode)
   io.Copy(w, resp.Body)
-  access_log(aid, w, r, query_url.String(), start_at)
+  access_log(aid, w, r, query_url.String(), post_query, start_at)
 }
 
 //TODO
