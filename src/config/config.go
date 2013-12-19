@@ -44,6 +44,7 @@ type ConfigFile struct {
   AccessLogFile string `json:"access_log_file"`
   ErrorLogFile  string `json:"error_log_file"`
   AdminUri      string `json:"admin_uri"`
+  PprofHttpd    string `json:"pprof_httpd"`
 }
 
 //返回配置文件条目数

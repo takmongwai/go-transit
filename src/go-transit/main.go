@@ -5,11 +5,14 @@ import (
   "flag"
   "fmt"
   "log"
+  "net/http"
   "os"
   "path/filepath"
   "strings"
   "time"
 )
+
+import _ "net/http/pprof"
 
 type RuntimeEnv struct {
   FullPath  string
@@ -175,5 +178,11 @@ func main() {
   }
   init_access_log()
   init_error_log()
+  fmt.Println("pprof listen on:", g_config.PprofHttpd)
+  if len(g_config.PprofHttpd) != 0 {
+    go func() {
+      log.Println(http.ListenAndServe(g_config.PprofHttpd, nil))
+    }()
+  }
   Run()
 }

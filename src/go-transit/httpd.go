@@ -3,8 +3,8 @@ package main
 import (
   "bytes"
   "config"
-  "crypto/md5"
   "fmt"
+  "hash/crc32"
   "io"
   "io/ioutil"
   "log"
@@ -53,16 +53,16 @@ func header_copy(s http.Header, d *http.Header) {
 }
 
 func access_id(as string) string {
-  md5 := func(s string) string {
-    hash_md5 := md5.New()
-    io.WriteString(hash_md5, s)
-    return fmt.Sprintf("%x", hash_md5.Sum(nil))
+  c := func(s string) string {
+    h := crc32.NewIEEE()
+    h.Write([]byte(s))
+    return fmt.Sprintf("%x", h.Sum32())
   }
   nano := time.Now().UnixNano()
   rand.Seed(nano)
   rnd_num := rand.Int63()
-  fs := md5(md5(as) + md5(strconv.FormatInt(nano, 10)) + md5(strconv.FormatInt(rnd_num, 10)))
-  return strings.ToUpper(fmt.Sprintf("%s.%s", fs[0:4], fs[28:]))
+  fs := c(c(as) + c(strconv.FormatInt(nano, 10)) + c(strconv.FormatInt(rnd_num, 10)))
+  return fs
 }
 
 func access_ip(r *http.Request) string {
@@ -83,7 +83,11 @@ func access_ip(r *http.Request) string {
 }
 
 //access begin logger
-func access_log_begin(aid string, r *http.Request, query_url string, post_query []string) {
+func access_log_begin(
+  aid string,
+  r *http.Request,
+  query_url string,
+  post_query []string) {
 
   if len(post_query) == 0 {
     post_query = append(post_query, "-")
@@ -103,7 +107,12 @@ func access_log_begin(aid string, r *http.Request, query_url string, post_query 
 }
 
 //transit complete logger
-func access_log(aid string, w http.ResponseWriter, r *http.Request, query_url string, post_query []string, startTime time.Time) {
+func access_log(
+  aid string,
+  w http.ResponseWriter,
+  r *http.Request,
+  query_url string,
+  post_query []string, startTime time.Time) {
 
   if len(post_query) == 0 {
     post_query = append(post_query, "-")
