@@ -144,7 +144,7 @@ func access_log(aid string, w http.ResponseWriter, r *http.Request, query_url st
 func parse_querys(r *http.Request) (raw_query []string) {
   r.ParseForm()
   check_key_map := make(map[string]bool)
-  check_and_append := func(_k, _v string) {
+  check_refer_and_append := func(_k, _v string) {
     if _, ok := check_key_map[_k]; ok {
       return
     }
@@ -153,13 +153,13 @@ func parse_querys(r *http.Request) (raw_query []string) {
   }
 
   for k, _ := range r.Form {
-    check_and_append(k, r.Form.Get(k))
+    raw_query = append(raw_query, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(r.Form.Get(k))))
   }
 
   if len(r.Referer()) > 0 {
     if uri, err := url.Parse(r.Referer()); err == nil {
       for k, _ := range uri.Query() {
-        check_and_append(k, uri.Query().Get(k))
+        check_refer_and_append(k, uri.Query().Get(k))
       }
     }
   }
