@@ -210,11 +210,9 @@ func referer_values(r *http.Request) (ps []string) {
   return
 }
 
-func post_values(r *http.Request) (ps []string) {
-  if raw_bytes, err := ioutil.ReadAll(r.Body); err == nil {
-    body_buffer := bytes.NewBuffer(raw_bytes)
-    ps = strings.Split(body_buffer.String(), "&")
-  }
+func post_values(raw_bytes []byte) (ps []string) {
+  body_buffer := bytes.NewBuffer(raw_bytes)
+  ps = strings.Split(body_buffer.String(), "&")
   return
 }
 
@@ -240,14 +238,23 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
     err                                  error
     post_query                           []string
     get_post_referer                     []string
+    raw_bytes                            []byte
   )
   defer func() {
     if re := recover(); re != nil {
       g_env.ErrorLog.Println("Recovered in backendServer:", re)
     }
   }()
+
+  //获取原始的post请求值
+  if raw_bytes, err = ioutil.ReadAll(r.Body); err != nil {
+    g_env.ErrorLog.Println(req, err)
+    http.Error(w, "Read Body Error.", http.StatusInternalServerError)
+    return
+  }
+
   //取Post值,不做修改
-  post_query = post_values(r)
+  post_query = post_values(raw_bytes)
   //取url,post,referer中所包含的请求参数,只用于转发查找
   get_post_referer = merge_querys(strings.Split(r.URL.RawQuery, "&"), post_query, referer_values(r))
 
@@ -296,7 +303,7 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   case "GET", "HEAD":
     req, err = http.NewRequest(r.Method, query_url.String(), nil)
   case "POST":
-    req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewBufferString(strings.Join(post_query, "&")))
+    req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewReader(raw_bytes))
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
   default:
     http.Error(w, "MethodNotAllowed", http.StatusMethodNotAllowed)

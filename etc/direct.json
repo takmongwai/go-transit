@@ -4,11 +4,10 @@
      ],
      "listen":{
        "host": "0.0.0.0",
-       "port": 9000
+       "port": 9001
      },
       "default":{
-        "target_server": "http://cmb.funguide.com.cn:8080",
-        "target_param_name_swap":{ "a":"AXAX" }
+        "target_server": "http://10.150.150.18:8080"
       },
       "access_log_file":"log/access.log",
       "error_log_file":"log/error.log"
