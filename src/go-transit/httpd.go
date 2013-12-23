@@ -94,7 +94,7 @@ func access_log_begin(
   }
   log_line := fmt.Sprintf(`Begin [%s] "%s" [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s}"`,
     ansi_color(WHITE, BLACK, access_ip(r)),
-    ansi_color(WHITE, RED, aid),
+    ansi_color(GREEN, RED, aid),
     time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
     r.Method,
     ansi_color(GREEN, BLACK, r.RequestURI),
@@ -125,7 +125,7 @@ func access_log(
 
   log_line := fmt.Sprintf(`Complete [%s] "%s" [%s] S:"%s %s %s F:{%s}" D:"%s F:{%s} %s %s",%0.5fs`,
     ansi_color(WHITE, BLACK, access_ip(r)),
-    ansi_color(WHITE, RED, aid),
+    ansi_color(GREEN, RED, aid),
     time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
     r.Method,
     ansi_color(GREEN, BLACK, r.RequestURI),
