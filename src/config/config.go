@@ -31,6 +31,7 @@ type Config struct {
   TargetParamNameSwap map[string]string `json:"target_param_name_swap"`
   ConnectionTimeout   int               `json:"connection_timeout"`
   ResponseTimeout     int               `json:"response_timeout"`
+  Redirect            bool              `json:"redirect"`
 }
 
 //总体配置文件结构

@@ -33,6 +33,8 @@ const (
   WHITE   = 7
 )
 
+const TRANSIT_VER = "0.0.4"
+
 type Server struct {
 }
 
@@ -311,6 +313,25 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   switch r.Method {
   case "GET", "HEAD":
     req, err = http.NewRequest(r.Method, query_url.String(), nil)
+    if !cfg.Redirect { //Gets 302, does not follow redirect
+      t := new(http.Transport)
+      if resp, err := t.RoundTrip(req); err == nil &&
+        (resp.StatusCode == http.StatusMovedPermanently ||
+          resp.StatusCode == http.StatusFound ||
+          resp.StatusCode == http.StatusTemporaryRedirect) {
+        req.Close = true
+        defer resp.Body.Close()
+        for hk, _ := range resp.Header {
+          w.Header().Set(hk, resp.Header.Get(hk))
+        }
+        w.Header().Set("X-Transit-Ver", TRANSIT_VER)
+        w.Header().Set("Server", "X-Transit")
+        w.WriteHeader(resp.StatusCode)
+        io.Copy(w, resp.Body)
+        access_log(aid, w, r, query_url.String(), post_query, start_at)
+        return
+      }
+    }
   case "POST":
     req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewReader(raw_bytes))
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -340,7 +361,7 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   for hk, _ := range resp.Header {
     w.Header().Set(hk, resp.Header.Get(hk))
   }
-  w.Header().Set("X-Transit-Ver", "0.0.2")
+  w.Header().Set("X-Transit-Ver", TRANSIT_VER)
   w.Header().Set("Server", "X-Transit")
 
   w.WriteHeader(resp.StatusCode)
