@@ -28,7 +28,8 @@ http Reverse Proxy server implemented by golang
               "user_name":"UserName"
           },
           "connection_timeout":30,
-          "response_timeout":120
+          "response_timeout":120,
+          "redirect":true
       }
   ],
   "listen":{
@@ -73,6 +74,9 @@ see config
 
 ### error_log_file
 (*) string
+
+### redirect
+(*) boolean
 
 
 ## 匹配优先级
