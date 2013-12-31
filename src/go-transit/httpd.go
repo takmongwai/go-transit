@@ -3,6 +3,7 @@ package main
 import (
   "bytes"
   "config"
+  "errors"
   "fmt"
   "hash/crc32"
   "io"
@@ -14,6 +15,7 @@ import (
   "net/url"
   "os"
   "os/signal"
+  "reflect"
   "strconv"
   "strings"
   "syscall"
@@ -43,6 +45,10 @@ type Server struct {
 //fc 前景(文字)颜色
 func ansi_color(bc int, fc int, s string) string {
   return fmt.Sprintf("\x1b[%d;%dm%s%s", 40+bc, 30+fc, s, CLR_N)
+}
+
+func disallow_redirect(req *http.Request, via []*http.Request) error {
+  return errors.New("Redirection is not allowed")
 }
 
 /**
@@ -306,6 +312,10 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
     Transport: &transport,
   }
 
+  if cfg.Redirect == false {
+    client.CheckRedirect = disallow_redirect
+  }
+
   query_url, _ := url.Parse(target_server(cfg) + target_path(r, cfg) + "?" + swap_raw_query(r, cfg))
 
   access_log_begin(aid, r, query_url.String(), post_query)
@@ -313,25 +323,6 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   switch r.Method {
   case "GET", "HEAD":
     req, err = http.NewRequest(r.Method, query_url.String(), nil)
-    if !cfg.Redirect { //Gets 302, does not follow redirect
-      t := new(http.Transport)
-      if resp, err := t.RoundTrip(req); err == nil &&
-        (resp.StatusCode == http.StatusMovedPermanently ||
-          resp.StatusCode == http.StatusFound ||
-          resp.StatusCode == http.StatusTemporaryRedirect) {
-        req.Close = true
-        defer resp.Body.Close()
-        for hk, _ := range resp.Header {
-          w.Header().Set(hk, resp.Header.Get(hk))
-        }
-        w.Header().Set("X-Transit-Ver", TRANSIT_VER)
-        w.Header().Set("Server", "X-Transit")
-        w.WriteHeader(resp.StatusCode)
-        io.Copy(w, resp.Body)
-        access_log(aid, w, r, query_url.String(), post_query, start_at)
-        return
-      }
-    }
   case "POST":
     req, err = http.NewRequest(r.Method, query_url.String(), bytes.NewReader(raw_bytes))
     req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -340,9 +331,8 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
     return
   }
   req.Close = true
-
+  //不能用 RoundTrip(req) 方式拦截  302， 这样会导致两次请求
   header_copy(r.Header, &req.Header)
-
   if err != nil {
     g_env.ErrorLog.Println(err)
     http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -353,6 +343,23 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
   defer resp.Body.Close()
 
   if err != nil {
+    if resp.StatusCode == http.StatusMovedPermanently ||
+      resp.StatusCode == http.StatusFound ||
+      resp.StatusCode == http.StatusTemporaryRedirect {
+      rd_err := reflect.ValueOf(err).Interface().(*url.Error)
+      for hk, _ := range resp.Header {
+        if hk == "Content-Length" {
+          continue
+        }
+        w.Header().Set(hk, resp.Header.Get(hk))
+      }
+      w.Header().Set("X-Transit-Ver", TRANSIT_VER)
+      w.Header().Set("Server", "X-Transit")
+      w.WriteHeader(resp.StatusCode)
+      fmt.Fprintf(w, `<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8"><TITLE>302 Moved</TITLE></HEAD><BODY><H1>302 Moved</H1>The document has moved<A HREF="%s">here</A>.</BODY></HTML>`, rd_err.URL)
+      access_log(aid, w, r, rd_err.URL, post_query, start_at)
+      return
+    }
     g_env.ErrorLog.Println(req, err)
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return

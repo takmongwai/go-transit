@@ -14,7 +14,7 @@
         "port": 9000
     },
     "default": {
-        "target_server": "http://m.funguide.com.cn"
+        "target_server": "http://weidewang.com"
     },
     "access_log_file": "log/access.log",
     "error_log_file": "log/error.log",
