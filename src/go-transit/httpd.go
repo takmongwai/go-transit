@@ -291,6 +291,8 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
     cfg = g_config.FindByParamsOrSourcePath(get_post_referer, r.URL.Path)
   }
 
+  aid = aid + strconv.Itoa(cfg.Id)
+
   if conntction_timeout = cfg.ConnectionTimeout; conntction_timeout <= 0 {
     conntction_timeout = 15
   }
