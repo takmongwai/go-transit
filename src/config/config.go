@@ -5,6 +5,7 @@ import (
   "regexp"
   "strconv"
   "strings"
+  "sync"
   "time"
 )
 
@@ -34,12 +35,16 @@ type Config struct {
 
 type cacheMap map[string]*Config
 
+var cacheLock = sync.Mutex{}
+
 var (
   paramCache = make(cacheMap)
   pathCache  = make(cacheMap)
 )
 
 func (cc cacheMap) set(key string, val *Config) {
+  cacheLock.Lock()
+  defer cacheLock.Unlock()
   cc[key] = val
 }
 
