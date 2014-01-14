@@ -9,3 +9,6 @@
 
 1. 可分别对前端和后端做 gzip 支持
 1. 配置文件添加变量支持,如 "$var_host_google":"http://www.google.com/",然后在配置文件中的其他地方就可以用 $_var_host_google 替代 "http://www.google.com/"
+
+
+1. 配置解析添加缓存,直接查表返回结果,不再遍历查询

@@ -5,8 +5,11 @@ import (
 )
 
 /**
-go test -test.bench=".*" 
+测试特定方法
+go test -run "TestFindBySourcePathAndParams_Got_100"
+go test -test.bench=".*"
 正则表达式匹配要比精确匹配慢10倍
+go help testflag 查看测试工具帮助
 */
 
 //配置文件样例
@@ -48,26 +51,23 @@ func BenchmarkFindBySourcePath(b *testing.B) {
   }
 }
 
-
 func TestFindBySourcePath_Regex(t *testing.T) {
-  if config, err := configFile.FindBySourcePath("/BB");err != nil{
+  if config, err := configFile.FindBySourcePath("/BB"); err != nil {
     t.Errorf("根据源请求路径进行查找错误.A")
-  }else if config.Id != 5000 {
+  } else if config.Id != 5000 {
     t.Errorf("根据源请求路径进行查找错误.B")
   }
 }
 
 func BenchmarkFindBySourcePath_Regex(b *testing.B) {
   for i := 0; i < b.N; i++ {
-    if config, err := configFile.FindBySourcePath("/BB"); err !=nil {
+    if config, err := configFile.FindBySourcePath("/BB"); err != nil {
       b.Errorf("根据源请求路径进行查找错误.A")
-    }else if config.Id != 5000 {
+    } else if config.Id != 5000 {
       b.Errorf("根据源请求路径进行查找错误.B")
     }
   }
 }
-
-
 
 //测试根据源参数进行查找
 func TestFindBySourceParams(t *testing.T) {
@@ -107,6 +107,9 @@ func BenchmarkFindBySourceParams_Regex(b *testing.B) {
 
 //应该返回默认配置
 func TestFindByParamsOrSourcePath_GotDefault(t *testing.T) {
+  if configFile.Len() == 0 {
+    configFile = LoadConfigFile(CONFIG_FILE)
+  }
   config := configFile.FindByParamsOrSourcePath([]string{"processcode=noexits"}, "/noexits")
   if config.TargetServer != "http://10.150.150.184" {
     t.Errorf("根据源参数或路径进行查找错误")
@@ -115,6 +118,9 @@ func TestFindByParamsOrSourcePath_GotDefault(t *testing.T) {
 
 //根据路径和参数进行匹配
 func TestFindBySourcePathAndParams_Got_100(t *testing.T) {
+  if configFile.Len() == 0 {
+    configFile = LoadConfigFile(CONFIG_FILE)
+  }
   config, _ := configFile.FindBySourcePathAndParams([]string{"processcode=99999", "processcode=88888"}, "/ticket/req.do")
   if config.Id != 100 {
     t.Errorf("根据源参数和路径进行查找错误")
@@ -122,6 +128,9 @@ func TestFindBySourcePathAndParams_Got_100(t *testing.T) {
 }
 
 func TestFindBySourcePathAndParams_Got_nil(t *testing.T) {
+  if configFile.Len() == 0 {
+    configFile = LoadConfigFile(CONFIG_FILE)
+  }
   config, _ := configFile.FindBySourcePathAndParams([]string{"processcode=no", "processcode=noconfig"}, "/ticket/req.do")
   if config != nil {
     t.Errorf("根据源参数和路径进行查找错误")
