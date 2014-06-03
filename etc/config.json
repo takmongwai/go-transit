@@ -67,7 +67,8 @@
     ],
     "listen": {
         "host": "0.0.0.0",
-        "port": 9000
+        "port": 9000,
+        "unix":"/tmp/go-transit.socket"
     },
     "default": {
         "target_server": "http://10.150.150.247",

@@ -39,6 +39,7 @@ type ConfigFile struct {
   Listen  struct {
     Host string
     Port int
+    Unix string
   }
   AccessLogFile string `json:"access_log_file"`
   ErrorLogFile  string `json:"error_log_file"`

@@ -291,7 +291,7 @@ func (s Server) handler_func(w http.ResponseWriter, r *http.Request) {
     cfg = g_config.FindByParamsOrSourcePath(get_post_referer, r.URL.Path)
   }
 
-  aid = aid + strconv.Itoa(cfg.Id)
+  aid = aid + "-" + strconv.Itoa(cfg.Id)
 
   if conntction_timeout = cfg.ConnectionTimeout; conntction_timeout <= 0 {
     conntction_timeout = 15
@@ -389,16 +389,34 @@ func Run() {
   signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT)
 
   server := Server{}
+  //TCP Listen
   go func() {
-    s := &http.Server{
+    tcpListen := &http.Server{
       Addr:           fmt.Sprintf("%s:%d", g_config.Listen.Host, g_config.Listen.Port),
       Handler:        http.HandlerFunc(server.handler_func),
       ReadTimeout:    120 * time.Second,
       WriteTimeout:   120 * time.Second,
       MaxHeaderBytes: 1 << 20,
     }
-    log.Fatal(s.ListenAndServe())
+    log.Fatal(tcpListen.ListenAndServe())
   }()
+  
+  //Unix socket Listen
+  if len(g_config.Listen.Unix) > 0{
+    
+    if file_exists(g_config.Listen.Unix) {
+      os.Remove(g_config.Listen.Unix)
+    }
+    go func(){
+      l,err := net.Listen("unix","/tmp/go-transit.socket")
+      if err != nil {
+          fmt.Printf("%s\n", err)
+      } else {
+          http.Serve(l, http.HandlerFunc(server.handler_func))
+      }
+    }()  
+  }
+  
 
   <-sigchan
 }
