@@ -408,7 +408,7 @@ func Run() {
       os.Remove(g_config.Listen.Unix)
     }
     go func(){
-      l,err := net.Listen("unix","/tmp/go-transit.socket")
+      l,err := net.Listen("unix",g_config.Listen.Unix)
       if err != nil {
           fmt.Printf("%s\n", err)
       } else {
