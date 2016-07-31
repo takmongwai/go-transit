@@ -33,4 +33,4 @@ run:
 
 .PHONY: run-docker
 run-docker: build-docker
-	docker run --name ${REPOSITORY} -it --rm -p 9000:9000 ${REPOSITORY}
+	docker-compose up --build

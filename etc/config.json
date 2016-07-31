@@ -3,6 +3,7 @@
     "configs": [
         {
             "id": 900,
+            "allow_users":["user1","user2"],
             "source_params": [
                 "^PA=A.*"
             ],

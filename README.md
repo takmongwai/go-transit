@@ -12,7 +12,8 @@ http Reverse Proxy server implemented by golang
 
 
 ## 配置文件
-<pre>
+
+```
 {
   "comment":"注释"
   "configs":[
@@ -44,7 +45,8 @@ http Reverse Proxy server implemented by golang
   "pprof_comment": "可通过 http://localhost:20000/debug/pprof/ 访问,go tool pprof --text http://localhost:10010/debug/pprof/profile,",
   "pprof_httpd": "localhost:20000",
 }
-</pre>
+
+```
 
 
 ### comment
@@ -56,8 +58,9 @@ http Reverse Proxy server implemented by golang
 匹配规则，可以写多个
 #### config
 * id {1} integer
+* allow_users (*) []string 允许用户访问列表,留空则允许所有用户访问
 * source_path (*) string
-* source_params (*) string
+* source_params (*) []string
 * target_server {0,1} string
 * target_path {0,1} string
 * target_param_name_swap (*) map[string]string
@@ -71,11 +74,11 @@ http Reverse Proxy server implemented by golang
 ### default
 see config
 
-### access_log_file
-(*) string
+### access_log
+(*) string 留空则输出到 stdout
 
-### error_log_file
-(*) string
+### error_log
+(*) string 留空输出到 stderr
 
 ### redirect
 (*) boolean
@@ -83,3 +86,9 @@ see config
 
 ## 匹配优先级
 (id + source_params + source_path) > (id + source_params) > (id + source_path)
+
+
+## 请求身份校验
+
+
+
