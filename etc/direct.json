@@ -16,8 +16,8 @@
     "default": {
         "target_server": "http://weidewang.com"
     },
-    "access_log_file": "log/access.log",
-    "error_log_file": "log/error.log",
+    "access_log": "log/access.log",
+    "error_log": "log/error.log",
     "pprof_comment": "pprof 监听地址端口",
     "pprof_httpd": "localhost:20000"
 }
