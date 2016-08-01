@@ -22,7 +22,8 @@ type StringSlice []string
 
 //配置项
 type Config struct {
-	Id                  int               `json:"id"`
+	ID                  int               `json:"id"`
+	AllowUsers          StringSlice       `json:"allow_users"`
 	SourcePaths         StringSlice       `json:"source_path"`
 	SourceParams        StringSlice       `json:"source_params"`
 	TargetServer        string            `json:"target_server"`
@@ -101,13 +102,13 @@ reqPath 当前请求的路径
 func (cf *Config) FindBySourcePath(reqPath string) (*Config, *ConfigErr) {
 	var cache_key string
 
-	cache_key = strconv.Itoa(cf.Id) + reqPath
+	cache_key = strconv.Itoa(cf.ID) + reqPath
 	if cfg, ok := pathCache.get(cache_key); ok {
 		return cfg, nil
 	}
 
 	for _, sp := range cf.SourcePaths {
-		cache_key = strconv.Itoa(cf.Id) + reqPath
+		cache_key = strconv.Itoa(cf.ID) + reqPath
 		if strings.HasPrefix(sp, "^") && regexp.MustCompile(sp).MatchString(reqPath) {
 			pathCache.set(cache_key, cf)
 			return cf, nil

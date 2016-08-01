@@ -90,5 +90,8 @@ see config
 
 ## 请求身份校验
 
+如果 config 配置中的 `allow_users` 属性为非空,则需要在请求的时候附带请求身份验证头信息,HTTP Base Authentication
+
+身份验证方法要升级
 
 

@@ -3,7 +3,10 @@
     "configs": [
         {
             "id": 900,
-            "allow_users":["user1","user2"],
+            "allow_users": [
+                "user1",
+                "user2"
+            ],
             "source_params": [
                 "^PA=A.*"
             ],
@@ -69,15 +72,16 @@
     "listen": {
         "host": "0.0.0.0",
         "port": 9000,
-        "unix":"/tmp/go-transit.socket"
+        "unix": "/tmp/go-transit.socket"
     },
     "default": {
-        "target_server": "http://192.168.1.21",
+        "target_server": "http://www.google.com/",
         "redirect": false
     },
     "access_log": "",
     "error_log": "",
     "pprof_comment": "可通过 http://localhost:20000/debug/pprof/ 访问,go tool pprof --text http://localhost:10010/debug/pprof/profile,",
     "pprof_httpd": "localhost:20000",
-    "admin_uri": "/go-transit"
+    "admin_host_comment":"可通过 telnet 连接到管理端口上执行管理操作",
+    "admin_host": "127.0.0.1:7000"
 }

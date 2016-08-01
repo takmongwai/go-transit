@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -34,7 +35,7 @@ const (
 	WHITE   = 7
 )
 
-const TRANSIT_VER = "0.0.4"
+var Version = "0.0.4"
 
 type Server struct {
 }
@@ -280,7 +281,13 @@ func (s Server) handlerFunc(w http.ResponseWriter, r *http.Request) {
 		cfg = globalConfig.FindByParamsOrSourcePath(getPostReferer, r.URL.Path)
 	}
 
-	aid = aid + "-" + strconv.Itoa(cfg.Id)
+	aid = aid + "-" + strconv.Itoa(cfg.ID)
+
+	// 对访问用户做检查,如果配置中的 allow_users 不为空,则说明该配置项需要身份验证才能访问
+	if len(cfg.AllowUsers) != 0 && verifyAccessUser(r.BasicAuth()) != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	if conntctionTimeout = cfg.ConnectionTimeout; conntctionTimeout <= 0 {
 		conntctionTimeout = 15
@@ -344,7 +351,7 @@ func (s Server) handlerFunc(w http.ResponseWriter, r *http.Request) {
 				}
 				w.Header().Set(hk, resp.Header.Get(hk))
 			}
-			w.Header().Set("X-Transit-Ver", TRANSIT_VER)
+			w.Header().Set("X-Transit-Ver", Version)
 			w.Header().Set("Server", "X-Transit")
 			w.WriteHeader(resp.StatusCode)
 			fmt.Fprintf(w, `<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8"><TITLE>302 Moved</TITLE></HEAD><BODY><H1>302 Moved</H1>The document has moved<A HREF="%s">here</A>.</BODY></HTML>`, rd_err.URL)
@@ -359,12 +366,20 @@ func (s Server) handlerFunc(w http.ResponseWriter, r *http.Request) {
 	for hk, _ := range resp.Header {
 		w.Header().Set(hk, resp.Header.Get(hk))
 	}
-	w.Header().Set("X-Transit-Ver", TRANSIT_VER)
+	w.Header().Set("X-Transit-Ver", Version)
 	w.Header().Set("Server", "X-Transit")
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 	accessLog(aid, w, r, queryURL.String(), postQuery, startAt)
+}
+
+// verifyAccessUser 对请求做用户身份验证
+func verifyAccessUser(id, pass string, ok bool) error {
+	if !ok {
+		return errors.New("Unauthorized")
+	}
+	return accessUserMap.CheckByIDAndPassword(id, pass)
 }
 
 func Run() {
@@ -403,5 +418,58 @@ func Run() {
 		}()
 	}
 
+	// Admin telnet Listen
+	adminListen()
+
 	<-sigchan
+}
+
+const (
+	telnetHelp = `
+	help:
+	  reload: Reload date file.
+	`
+)
+
+func adminListen() {
+	ln, err := net.Listen("tcp", globalConfig.AdminHost)
+	if err != nil {
+		log.Fatal(err.Error())
+		return
+	}
+	log.Println("telnet listen ", globalConfig.AdminHost)
+	for {
+		conn, err := ln.Accept()
+		if err != nil && err.Error() == "EOF" {
+			break
+		} else if err != nil {
+			continue
+		}
+		channel := make(chan string)
+		go adminRequestHandle(conn, channel)
+	}
+}
+
+func adminRequestHandle(conn net.Conn, out chan string) {
+	defer conn.Close()
+	log.Println(conn.RemoteAddr())
+	for {
+		line, err := bufio.NewReader(conn).ReadBytes('\n')
+		if err != nil {
+			log.Println(err.Error())
+			return
+		}
+
+		cmd := strings.TrimSpace(string(line))
+		log.Println("[Request]:", cmd)
+
+		switch cmd {
+		case "reload":
+			io.Copy(conn, bytes.NewBufferString("reload success\n"))
+			return
+		default:
+			io.Copy(conn, bytes.NewBufferString(telnetHelp+"\n"))
+			return
+		}
+	}
 }

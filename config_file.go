@@ -41,10 +41,10 @@ type ConfigFile struct {
 		Port int
 		Unix string
 	}
-	AccessLog string `json:"access_log"`
-	ErrorLog  string `json:"error_log"`
-	AdminUri      string `json:"admin_uri"`
-	PprofHttpd    string `json:"pprof_httpd"`
+	AccessLog  string `json:"access_log"`
+	ErrorLog   string `json:"error_log"`
+	PprofHttpd string `json:"pprof_httpd"`
+	AdminHost  string `json:"admin_host"`
 }
 
 //返回配置文件条目数
@@ -57,7 +57,7 @@ type sortById []Config
 
 func (v sortById) Len() int           { return len(v) }
 func (v sortById) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
-func (v sortById) Less(i, j int) bool { return v[i].Id < v[j].Id }
+func (v sortById) Less(i, j int) bool { return v[i].ID < v[j].ID }
 
 //根据请求源参数在整个文件中进行查询
 func (c *ConfigFile) FindBySourceParams(reqParams []string) (*Config, *ConfigErr) {
@@ -83,7 +83,7 @@ func (c *ConfigFile) FindBySourcePath(reqPath string) (*Config, *ConfigErr) {
 func (c *ConfigFile) FindBySourcePathAndParams(reqParams []string, reqPath string) (*Config, *ConfigErr) {
 	for idx := 0; idx < len(c.Configs); idx++ {
 		if pc, pe := c.Configs[idx].FindBySourcePath(reqPath); pe == nil {
-			if sc, se := c.Configs[idx].FindBySourceParams(reqParams); se == nil && pc.Id == sc.Id {
+			if sc, se := c.Configs[idx].FindBySourceParams(reqParams); se == nil && pc.ID == sc.ID {
 				return &c.Configs[idx], nil
 			}
 		}

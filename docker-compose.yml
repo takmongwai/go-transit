@@ -1,0 +1,17 @@
+version: '2'
+services:
+  app:
+    build: .
+
+  nginx:
+    build: ./deploy/nginx
+    links:
+      - app
+    
+  ngrok:
+    image: ngrok-client
+    links:
+      - nginx
+    environment:
+      SUBDOMAIN: gtr
+      PORT: nginx:80

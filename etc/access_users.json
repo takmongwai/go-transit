@@ -1,0 +1,12 @@
+[
+    {
+        "id": "user1",
+        "password": "password",
+        "active": true
+    },
+    {
+        "id": "user2",
+        "password": "password",
+        "active": false
+    }
+]

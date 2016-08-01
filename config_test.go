@@ -37,7 +37,7 @@ func BenchmarkLoadConfig(b *testing.B) {
 //测试根据源请求路径进行查找
 func TestFindBySourcePath(t *testing.T) {
 	config, _ := configFile.FindBySourcePath("/ticket/req.do")
-	if config.Id != 90 {
+	if config.ID != 90 {
 		t.Errorf("根据源请求路径进行查找错误")
 	}
 }
@@ -45,7 +45,7 @@ func TestFindBySourcePath(t *testing.T) {
 func BenchmarkFindBySourcePath(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		config, _ := configFile.FindBySourcePath("/ticket/req.do")
-		if config.Id != 90 {
+		if config.ID != 90 {
 			b.Errorf("根据源请求路径进行查找错误")
 		}
 	}
@@ -54,7 +54,7 @@ func BenchmarkFindBySourcePath(b *testing.B) {
 func TestFindBySourcePath_Regex(t *testing.T) {
 	if config, err := configFile.FindBySourcePath("/BB"); err != nil {
 		t.Errorf("根据源请求路径进行查找错误.A")
-	} else if config.Id != 5000 {
+	} else if config.ID != 5000 {
 		t.Errorf("根据源请求路径进行查找错误.B")
 	}
 }
@@ -63,7 +63,7 @@ func BenchmarkFindBySourcePath_Regex(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		if config, err := configFile.FindBySourcePath("/BB"); err != nil {
 			b.Errorf("根据源请求路径进行查找错误.A")
-		} else if config.Id != 5000 {
+		} else if config.ID != 5000 {
 			b.Errorf("根据源请求路径进行查找错误.B")
 		}
 	}
@@ -72,7 +72,7 @@ func BenchmarkFindBySourcePath_Regex(b *testing.B) {
 //测试根据源参数进行查找
 func TestFindBySourceParams(t *testing.T) {
 	config, _ := configFile.FindBySourceParams([]string{"processcode=11002"})
-	if config.Id != 2000 {
+	if config.ID != 2000 {
 		t.Errorf("根据源参数进行查找错误")
 	}
 }
@@ -80,7 +80,7 @@ func TestFindBySourceParams(t *testing.T) {
 func BenchmarkFindBySourceParams(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		config, _ := configFile.FindBySourceParams([]string{"processcode=11002"})
-		if config.Id != 2000 {
+		if config.ID != 2000 {
 			b.Errorf("根据源参数进行查找错误")
 		}
 	}
@@ -89,7 +89,7 @@ func BenchmarkFindBySourceParams(b *testing.B) {
 func TestFindBySourceParams_Regex(t *testing.T) {
 	if config, err := configFile.FindBySourceParams([]string{"processcode=r1002"}); err != nil {
 		t.Errorf("根据源参数进行查找错误.A")
-	} else if config.Id != 2001 {
+	} else if config.ID != 2001 {
 		t.Errorf("根据源参数进行查找错误.B")
 	}
 
@@ -99,7 +99,7 @@ func BenchmarkFindBySourceParams_Regex(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		if config, err := configFile.FindBySourceParams([]string{"processcode=r1002"}); err != nil {
 			b.Errorf("根据源参数进行查找错误.A")
-		} else if config != nil && config.Id != 2001 {
+		} else if config != nil && config.ID != 2001 {
 			b.Errorf("根据源参数进行查找错误.B")
 		}
 	}
@@ -122,7 +122,7 @@ func TestFindBySourcePathAndParams_Got_100(t *testing.T) {
 		configFile = LoadConfigFile(CONFIG_FILE)
 	}
 	config, _ := configFile.FindBySourcePathAndParams([]string{"processcode=99999", "processcode=88888"}, "/ticket/req.do")
-	if config.Id != 100 {
+	if config.ID != 100 {
 		t.Errorf("根据源参数和路径进行查找错误")
 	}
 }

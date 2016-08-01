@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -22,6 +24,7 @@ type RuntimeEnv struct {
 
 var globalConfig ConfigFile
 var globalEnv RuntimeEnv
+var accessUserMap *AccessUserMap
 
 func init() {
 	var (
@@ -38,6 +41,8 @@ func init() {
 	} else {
 		globalEnv.Home = filepath.Dir(fullpath)
 	}
+
+	accessUserMap = NewAccessUserMap()
 }
 
 func fileExists(name string) bool {
@@ -78,6 +83,23 @@ func initDir(dir string) {
 	if !fileExists(dir) {
 		os.MkdirAll(dir, 0755)
 	}
+}
+
+// initAccessUser 读取配置文件初始化访问用户列表
+func initAccessUser(fileName string) error {
+	b, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return err
+	}
+	aus := make([]*AccessUser, 0)
+	err = json.Unmarshal(b, &aus)
+	if err != nil {
+		return err
+	}
+	for _, au := range aus {
+		accessUserMap.Put(au.ID, au)
+	}
+	return nil
 }
 
 // initAccessLog 初始化访问日志,如果配置文件中该属性留空,则将访问日志输出到 stdout 标准输出中
@@ -138,14 +160,16 @@ func fileLogger(logPath string) (logger *log.Logger) {
 
 func main() {
 	var (
-		err        error
-		configFile string
-		host       string
-		port       int
+		err            error
+		configFile     string
+		accessUserFile string
+		host           string
+		port           int
 	)
 
 	flag.Usage = showUsage
 	flag.StringVar(&configFile, "f", "", "config file path")
+	flag.StringVar(&accessUserFile, "u", "", "access users file path")
 	flag.IntVar(&port, "p", 9000, "listen port,default 9000")
 	flag.StringVar(&host, "h", "", "listen ip,default 127.0.0.1")
 	flag.Parse()
@@ -173,6 +197,9 @@ func main() {
 	}
 	initAccessLog()
 	initErrorLog()
+	if err := initAccessUser(accessUserFile); err != nil {
+		log.Fatal(err)
+	}
 	fmt.Println("pprof listen on:", globalConfig.PprofHttpd)
 	if len(globalConfig.PprofHttpd) != 0 {
 		go func() {
