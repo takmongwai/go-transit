@@ -427,7 +427,7 @@ func Run() {
 const (
 	telnetHelp = `
 	help:
-	  reload: Reload date file.
+	  user: <user name> [1|0] 1:active 0:inactive
 	`
 )
 
@@ -463,13 +463,40 @@ func adminRequestHandle(conn net.Conn, out chan string) {
 		cmd := strings.TrimSpace(string(line))
 		log.Println("[Request]:", cmd)
 
-		switch cmd {
-		case "reload":
-			io.Copy(conn, bytes.NewBufferString("reload success\n"))
-			return
+		switch {
+		case strings.HasPrefix(cmd, "user"):
+			err := processUserCmd(removeCmdPreifx(cmd))
+			if err == nil {
+				io.Copy(conn, bytes.NewBufferString("success\n"))
+			} else {
+				io.Copy(conn, bytes.NewBufferString(err.Error()))
+			}
 		default:
 			io.Copy(conn, bytes.NewBufferString(telnetHelp+"\n"))
 			return
 		}
 	}
+}
+
+func removeCmdPreifx(cmd string) string {
+	ss := strings.Split(cmd, ":")
+	if len(ss) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(ss[1])
+}
+
+func processUserCmd(cmd string) error {
+	ss := strings.Split(cmd, " ")
+	if len(ss) != 2 {
+		return errors.New("error command")
+	}
+	id := ss[0]
+	var active bool
+	if ss[1] == "0" {
+		active = false
+	} else if ss[1] == "1" {
+		active = true
+	}
+	return accessUserMap.SetUserStatus(id, active)
 }

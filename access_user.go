@@ -49,3 +49,14 @@ func (aum *AccessUserMap) CheckByIDAndPassword(id, pass string) error {
 		return nil
 	}
 }
+
+func (aum *AccessUserMap) SetUserStatus(id string, active bool) error {
+	u := aum.Get(id)
+	if u == nil {
+		return errors.New("unknown user")
+	}
+
+	u.Active = active
+	aum.Put(id, u)
+	return nil
+}
